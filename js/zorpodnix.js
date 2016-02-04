@@ -6,21 +6,33 @@ var Zorpodnix = (function () {
       ],
       sizes = {
       },
-      shapes = [],
-      palettes = [
+      shapePalettes = [
         [ '#e6e593', '#d36b2a', '#b41719', '#4f68a7', '#6ca76f' ]
       ],
-      color = {
-        palette: palettes[0]
+      colors = {
+        shapePalette: shapePalettes[0]
       },
+      shapePainters = [],
+      shapes = [],
       margin = {},
       containers = {},
       canvases = {},
       contexts = {};
 
-  function addShape(shape) {
-    shapes.push(shape);
+  function addShapePainter(shape) {
+    shapePainters.push(shape);
   }
+
+  function Shape(shapePainter, fillColor) {
+    this.shapePainter = shapePainter;
+    this.fillColor = fillColor;
+  }
+  Shape.prototype.paint = function (context) {
+    context.save();
+    context.fillStyle = this.fillColor;
+    this.shapePainter(context);
+    context.restore();
+  };
 
   function updateLayout() {
     var size;
@@ -102,29 +114,39 @@ var Zorpodnix = (function () {
   function paintFrame() {
     var size = sizes.action.height,
         radius = size / 2 / 9,
-        context = contexts.action;
+        context = contexts.action,
+        shape = shapes[0];
     context.clearRect(0, 0, size, size);
     context.save();
     context.translate(size / 2, size / 2);
     context.scale(radius, radius);
-    shapes[0](context);
+    shape.paint(context);
     context.restore();
+  }
+
+  function makeShapes() {
+    shapePainters.forEach(function (shapePainter) {
+      colors.shapePalette.forEach(function (shapeColor) {
+        shapes.push(new Shape(shapePainter, shapeColor));
+      });
+    });
   }
 
   function load() {
     makeLayout();
     updateLayout();
     window.onresize = updateLayout;
+    makeShapes();
     paintFrame();
   }
 
   return {
     load: load,
-    addShape: addShape
+    addShapePainter: addShapePainter
   };
 })(); // end Zorpodnix
 
-Zorpodnix.addShape(function (context) {
+Zorpodnix.addShapePainter(function (context) {
   var sides = 3, i,
       increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
   context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
@@ -134,7 +156,7 @@ Zorpodnix.addShape(function (context) {
   }
   context.closePath(); context.fill();
 });
-Zorpodnix.addShape(function (context) {
+Zorpodnix.addShapePainter(function (context) {
   var sides = 4, i,
       increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
   context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
@@ -144,7 +166,7 @@ Zorpodnix.addShape(function (context) {
   }
   context.closePath(); context.fill();
 });
-Zorpodnix.addShape(function (context) {
+Zorpodnix.addShapePainter(function (context) {
   var sides = 6, i,
       increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
   context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
@@ -154,7 +176,7 @@ Zorpodnix.addShape(function (context) {
   }
   context.closePath(); context.fill();
 });
-Zorpodnix.addShape(function (context) {
+Zorpodnix.addShapePainter(function (context) {
   context.beginPath(); context.arc(0, 0, 1, 0, 2 * Math.PI);
   context.closePath(); context.fill();
 });
