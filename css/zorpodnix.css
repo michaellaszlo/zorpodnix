@@ -4,3 +4,20 @@
   box-sizing: border-box;
 }
 
+body, div, canvas {
+  position: absolute;
+  overflow: hidden;
+}
+
+#windowCanvas {
+  background: #ffe;
+}
+#actionContainer {
+  background: #888;
+}
+#countdownContainer {
+  background: #ddd;
+}
+#spellContainer {
+  background: #aaa;
+}
