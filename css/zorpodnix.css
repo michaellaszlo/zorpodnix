@@ -10,14 +10,8 @@ body, div, canvas {
 }
 
 #windowCanvas {
-  background: #ffe;
+  background: #000;
 }
-#actionContainer {
-  background: #888;
-}
-#countdownContainer {
-  background: #ddd;
-}
-#spellContainer {
-  background: #aaa;
+#frameContainer {
+  background: #fff;
 }

@@ -4,59 +4,74 @@ var Zorpodnix = (function () {
 
   var levels = [
       ],
-      size = {
+      sizes = {
+      },
+      shapes = [],
+      palettes = [
+        [ '#e6e593', '#d36b2a', '#b41719', '#4f68a7', '#6ca76f' ]
+      ],
+      color = {
+        palette: palettes[0]
       },
       margin = {},
       containers = {},
       canvases = {},
       contexts = {};
 
-  function updateLayout() {
-    var actionSize;
+  function addShape(shape) {
+    shapes.push(shape);
+  }
 
-    size.window = {
+  function updateLayout() {
+    var size;
+
+    sizes.window = {
       width: window.innerWidth,
       height: window.innerHeight
     };
 
     // Full-window canvas.
-    canvases.window.width = size.window.width;
-    canvases.window.height = size.window.height;
+    canvases.window.width = sizes.window.width;
+    canvases.window.height = sizes.window.height;
     
     // Calculate the dimensions and offset of the maximal 16:9 frame.
-    if (size.window.height * 16 / 9 < size.window.width) {
+    if (sizes.window.height * 16 / 9 < sizes.window.width) {
       // Full-height frame with margins to left and right.
-      size.frame = { height: size.window.height };
-      size.frame.width = size.frame.height * 16 / 9;
+      sizes.frame = { height: sizes.window.height };
+      sizes.frame.width = sizes.frame.height * 16 / 9;
       margin.frame = { top: 0, bottom: 0 };
-      margin.frame.left = (size.window.width - size.frame.width) / 2;
+      margin.frame.left = (sizes.window.width - sizes.frame.width) / 2;
       margin.frame.right = margin.frame.left;
     } else {
       // Full-width frame with margins above and below.
-      size.frame = { width: size.window.width };
-      size.frame.height = size.frame.width * 9 / 16;
+      sizes.frame = { width: sizes.window.width };
+      sizes.frame.height = sizes.frame.width * 9 / 16;
       margin.frame = { left: 0, right: 0 };
-      margin.frame.top = (size.window.height - size.frame.height) / 2;
+      margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
       margin.frame.bottom = margin.frame.top;
     }
 
     // Divide the three sections along its width: 9 + 1 + 6 = 16.
     // The height is 9:16, so the action area has sides 9:9 = square.
-    actionSize = size.frame.height;
-    size.action = { height: actionSize, width: actionSize };
-    size.countdown = { height: actionSize, width: actionSize / 9 };
-    size.spell = { height: actionSize, width: actionSize * 2 / 3 };
+    size = sizes.frame.height;
+    sizes.action = { height: size, width: size };
+    sizes.countdown = { height: size, width: size / 9 };
+    sizes.spell = { height: size, width: size * 2 / 3 };
 
     // Containers for the frame and its three sections.
     [ 'frame', 'action', 'countdown', 'spell' ].forEach(function (name) {
-      containers[name].style.width = size[name].width + 'px';
-      containers[name].style.height = size[name].height + 'px';
+      containers[name].style.width = sizes[name].width + 'px';
+      containers[name].style.height = sizes[name].height + 'px';
+      if (name !== 'frame') {
+        canvases[name].width = sizes[name].width;
+        canvases[name].height = sizes[name].height;
+      }
     });
     containers.frame.style.top = margin.frame.top + 'px';
     containers.frame.style.left = margin.frame.left + 'px';
-    containers.countdown.style.left = size.action.width + 'px';
-    containers.spell.style.left = (size.action.width +
-        size.countdown.width) + 'px';
+    containers.countdown.style.left = sizes.action.width + 'px';
+    containers.spell.style.left = (sizes.action.width +
+        sizes.countdown.width) + 'px';
   }
 
   function makeLayout() {
@@ -84,15 +99,64 @@ var Zorpodnix = (function () {
     });
   }
 
+  function paintFrame() {
+    var size = sizes.action.height,
+        radius = size / 2 / 9,
+        context = contexts.action;
+    context.clearRect(0, 0, size, size);
+    context.save();
+    context.translate(size / 2, size / 2);
+    context.scale(radius, radius);
+    shapes[0](context);
+    context.restore();
+  }
+
   function load() {
     makeLayout();
     updateLayout();
     window.onresize = updateLayout;
+    paintFrame();
   }
 
   return {
-    load: load
+    load: load,
+    addShape: addShape
   };
 })(); // end Zorpodnix
+
+Zorpodnix.addShape(function (context) {
+  var sides = 3, i,
+      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
+  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
+  for (i = 0; i < sides; ++i) {
+    angle += increment;
+    context.lineTo(Math.cos(angle), Math.sin(angle));
+  }
+  context.closePath(); context.fill();
+});
+Zorpodnix.addShape(function (context) {
+  var sides = 4, i,
+      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
+  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
+  for (i = 0; i < sides; ++i) {
+    angle += increment;
+    context.lineTo(Math.cos(angle), Math.sin(angle));
+  }
+  context.closePath(); context.fill();
+});
+Zorpodnix.addShape(function (context) {
+  var sides = 6, i,
+      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
+  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
+  for (i = 0; i < sides; ++i) {
+    angle += increment;
+    context.lineTo(Math.cos(angle), Math.sin(angle));
+  }
+  context.closePath(); context.fill();
+});
+Zorpodnix.addShape(function (context) {
+  context.beginPath(); context.arc(0, 0, 1, 0, 2 * Math.PI);
+  context.closePath(); context.fill();
+});
 
 window.onload = Zorpodnix.load;
