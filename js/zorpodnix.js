@@ -2,12 +2,18 @@
 var Zorpodnix = (function () {
   'use strict';
 
-  var levels = [
+  var levelSpecs = [
         {
-          numPairs: 4
+          numPairs: 4,
+          stageMaker: function (stageIndex) {
+            var stage = {};
+            stage.numPairs = Math.min(stageIndex + 2, 3);
+            return stage;
+          }
         }
       ],
-      current = {},
+      level = {},
+      stage = {},
       shapePalettes = [
         [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
       ],
@@ -31,7 +37,8 @@ var Zorpodnix = (function () {
       margin = {},
       containers = {},
       canvases = {},
-      contexts = {};
+      contexts = {},
+      status = {};
 
   function addShapePainter(shape) {
     shapePainters.push(shape);
@@ -221,17 +228,37 @@ var Zorpodnix = (function () {
     }
   }
 
+  function startStage(stageIndex) {
+    var i;
+    status.inStage = true;
+    stage = level.stageMaker(stageIndex);
+    stage.shapes = level.shapes.slice(0, stage.numPairs);
+    stage.syllables = level.syllables.slice(0, stage.numPairs);
+    for (i = 0; i < stage.numPairs; ++i) {
+      console.log(JSON.stringify(stage.shapes[i]), stage.syllables[i]);
+    }
+  }
+
+  function finishStage(success) {
+    status.inStage = false;
+  }
+
   function startLevel(levelIndex) {
-    var level = levels[levelIndex],
+    var levelSpec,
         i;
+    levelSpec = levelSpecs[levelIndex];
+    level.numPairs = levelSpec.numPairs;
+    level.stageMaker = levelSpec.stageMaker;
     shuffle(shapes);
     shuffle(syllables);
-    current.numPairs = level.numPairs;
-    current.shapes = shapes.slice(0, current.numPairs);
-    current.syllables = syllables.slice(0, current.numPairs);
-    for (i = 0; i < current.numPairs; ++i) {
-      console.log(JSON.stringify(current.shapes[i]), current.syllables[i]);
-    }
+    level.shapes = shapes.slice(0, level.numPairs);
+    level.syllables = syllables.slice(0, level.numPairs);
+    status.inLevel = true;
+    startStage(0);
+  }
+  
+  function finishLevel(success) {
+    status.inLevel = false;
   }
 
   function load() {
