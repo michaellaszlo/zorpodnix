@@ -15,12 +15,3 @@ body, div, canvas {
 #frameContainer {
   background: #fff;
 }
-#actionContainer {
-  background: #bbb;
-}
-#countdownContainer {
-  background: #eee;
-}
-#spellContainer {
-  background: #ddd;
-}

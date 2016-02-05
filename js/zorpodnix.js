@@ -3,7 +3,21 @@ var Zorpodnix = (function () {
   'use strict';
 
   var levels = [
+        {
+          numPairs: 4
+        }
       ],
+      current = {},
+      shapePalettes = [
+        [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
+      ],
+      colors = {
+        shapePalette: shapePalettes[0]
+      },
+      shapePainters = [],
+      shapes = [],
+      syllables,
+      spellLength,
       layout = {
         landscape: {
           action: 'right'
@@ -14,14 +28,6 @@ var Zorpodnix = (function () {
       },
       sizes = {
       },
-      shapePalettes = [
-        [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
-      ],
-      colors = {
-        shapePalette: shapePalettes[0]
-      },
-      shapePainters = [],
-      shapes = [],
       margin = {},
       containers = {},
       canvases = {},
@@ -29,6 +35,10 @@ var Zorpodnix = (function () {
 
   function addShapePainter(shape) {
     shapePainters.push(shape);
+  }
+
+  function setSyllables(someSyllables) {
+    syllables = someSyllables;
   }
 
   function Shape(shapePainter, fillColor) {
@@ -201,55 +211,44 @@ var Zorpodnix = (function () {
     }
   }
 
+  function shuffle(things) {
+    var i, j, temp;
+    for (i = 1; i < things.length; ++i) {
+      j = Math.floor(Math.random() * (i + 1));
+      temp = things[j];
+      things[j] = things[i];
+      things[i] = temp;
+    }
+  }
+
+  function startLevel(levelIndex) {
+    var level = levels[levelIndex],
+        i;
+    shuffle(shapes);
+    shuffle(syllables);
+    current.numPairs = level.numPairs;
+    current.shapes = shapes.slice(0, current.numPairs);
+    current.syllables = syllables.slice(0, current.numPairs);
+    for (i = 0; i < current.numPairs; ++i) {
+      console.log(JSON.stringify(current.shapes[i]), current.syllables[i]);
+    }
+  }
+
   function load() {
     makeShapes();
     makeLayout();
     window.onresize = function () {
       updateLayout();
-      //paintFrame();
     };
     window.onresize();
+    startLevel(0);
   }
 
   return {
     load: load,
-    addShapePainter: addShapePainter
+    addShapePainter: addShapePainter,
+    setSyllables: setSyllables
   };
 })(); // end Zorpodnix
-
-Zorpodnix.addShapePainter(function (context) {
-  var sides = 3, i,
-      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
-  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
-  for (i = 0; i < sides; ++i) {
-    angle += increment;
-    context.lineTo(Math.cos(angle), Math.sin(angle));
-  }
-  context.closePath(); context.fill();
-});
-Zorpodnix.addShapePainter(function (context) {
-  var sides = 4, i,
-      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
-  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
-  for (i = 0; i < sides; ++i) {
-    angle += increment;
-    context.lineTo(Math.cos(angle), Math.sin(angle));
-  }
-  context.closePath(); context.fill();
-});
-Zorpodnix.addShapePainter(function (context) {
-  var sides = 6, i,
-      increment = 2 * Math.PI / sides, angle = (Math.PI - increment) / 2;
-  context.beginPath(); context.moveTo(Math.cos(angle), Math.sin(angle));
-  for (i = 0; i < sides; ++i) {
-    angle += increment;
-    context.lineTo(Math.cos(angle), Math.sin(angle));
-  }
-  context.closePath(); context.fill();
-});
-Zorpodnix.addShapePainter(function (context) {
-  context.beginPath(); context.arc(0, 0, 1, 0, 2 * Math.PI);
-  context.closePath(); context.fill();
-});
 
 window.onload = Zorpodnix.load;

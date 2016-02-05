@@ -1,8 +1,10 @@
 
 -----
+Levels
+
 In one game session, we challenge the player to learn a vocabulary of
 shape-syllable pairs. The size of the vocabulary depends on the difficulty
-setting of the game session. The player can choose among four settings:
+level of the game session. The player can choose among four levels:
 
 - tyro: 4 pairs
 - mage: 8 pairs
@@ -11,10 +13,21 @@ setting of the game session. The player can choose among four settings:
 
 
 -----
-Shape ideas
+Stages
 
-snake, lizard, bird, mouse, frog, cat, bull
-cloud, lightning, tree, rose, grapes
+To complete a level, the player must pass a sequence of increasingly
+difficult stages. Early stages introduce shape-syllable pairs. Later
+stages increasingly hide shapes, requiring the player to recall the
+corresponding shapes.
+
+
+-----
+Shapes
+
+gecko, bird, mouse
+frog, cat, bull
+heart, hand, foot
+tree, rose, grapes
 
 
 -----
@@ -27,9 +40,9 @@ to choose a palette of five colors.
 -----
 Start game
 
-- the player selects a difficulty setting
+- the player selects a level
 - the syllables are shuffled
 - the shapes are shuffled
-- the first n syllable-shape pairs are selected
+- the first N syllable-shape pairs are selected (N is determined by the level)
 
 
