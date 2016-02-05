@@ -7,7 +7,7 @@ var Zorpodnix = (function () {
       sizes = {
       },
       shapePalettes = [
-        [ '#e6e593', '#d36b2a', '#b41719', '#4f68a7', '#6ca76f' ]
+        [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
       ],
       colors = {
         shapePalette: shapePalettes[0]
@@ -34,6 +34,14 @@ var Zorpodnix = (function () {
     context.restore();
   };
 
+  function makeShapes() {
+    shapePainters.forEach(function (shapePainter) {
+      colors.shapePalette.forEach(function (shapeColor) {
+        shapes.push(new Shape(shapePainter, shapeColor));
+      });
+    });
+  }
+
   function updateLayout() {
     var size;
 
@@ -46,29 +54,60 @@ var Zorpodnix = (function () {
     canvases.window.width = sizes.window.width;
     canvases.window.height = sizes.window.height;
     
-    // Calculate the dimensions and offset of the maximal 16:9 frame.
-    if (sizes.window.height * 16 / 9 < sizes.window.width) {
-      // Full-height frame with margins to left and right.
-      sizes.frame = { height: sizes.window.height };
-      sizes.frame.width = sizes.frame.height * 16 / 9;
-      margin.frame = { top: 0, bottom: 0 };
-      margin.frame.left = (sizes.window.width - sizes.frame.width) / 2;
-      margin.frame.right = margin.frame.left;
-    } else {
-      // Full-width frame with margins above and below.
-      sizes.frame = { width: sizes.window.width };
-      sizes.frame.height = sizes.frame.width * 9 / 16;
-      margin.frame = { left: 0, right: 0 };
-      margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
-      margin.frame.bottom = margin.frame.top;
-    }
+    // TODO: give containers integer dimensions in order to fit canvases
+    // TODO: stack sections vertically in portrait layout
+    // TODO: put action section to the right (landscape) or bottom (portrait)
+    // TODO: make the layout configurable: left or right, top or bottom
 
-    // Divide the three sections along its width: 9 + 1 + 6 = 16.
-    // The height is 9:16, so the action area has sides 9:9 = square.
-    size = sizes.frame.height;
-    sizes.action = { height: size, width: size };
-    sizes.countdown = { height: size, width: size / 9 };
-    sizes.spell = { height: size, width: size * 2 / 3 };
+    if (sizes.window.width > sizes.window.height) {
+      // Landscape layout. Calculate the maximal 16:9 frame.
+      if (sizes.window.height * 16 / 9 < sizes.window.width) {
+        // Full-height frame with margins to left and right.
+        sizes.frame = { height: sizes.window.height };
+        sizes.frame.width = Math.floor(sizes.frame.height * 16 / 9);
+        margin.frame = { top: 0, bottom: 0 };
+        margin.frame.left = (sizes.window.width - sizes.frame.width) / 2;
+        margin.frame.right = margin.frame.left;
+      } else {
+        // Full-width frame with margins above and below.
+        sizes.frame = { width: sizes.window.width };
+        sizes.frame.height = Math.floor(sizes.frame.width * 9 / 16);
+        margin.frame = { left: 0, right: 0 };
+        margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
+        margin.frame.bottom = margin.frame.top;
+      }
+      // Divide the three sections along the frame width: 9 + 1 + 6 = 16.
+      // The height is 9:16, so the action area has sides 9:9 = square.
+      size = sizes.frame.height;
+      sizes.action = { width: size, height: size };
+      sizes.countdown = { width: Math.floor(size / 9), height: size };
+      sizes.spell = { width: sizes.frame.width -
+          sizes.action.width - sizes.countdown.width, height: size };
+    } else {
+      // Portrait layout. Calculate the maximal 9:16 frame.
+      if (sizes.window.height * 9 / 16 < sizes.window.width) {
+        // Full-height frame with margins to left and right.
+        sizes.frame = { height: sizes.window.height };
+        sizes.frame.width = Math.floor(sizes.frame.height * 9 / 16);
+        margin.frame = { top: 0, bottom: 0 };
+        margin.frame.left = (sizes.window.width - sizes.frame.width) / 2;
+        margin.frame.right = margin.frame.left;
+      } else {
+        // Full-width frame with margins above and below.
+        sizes.frame = { width: sizes.window.width };
+        sizes.frame.height = Math.floor(sizes.frame.width * 16 / 9);
+        margin.frame = { left: 0, right: 0 };
+        margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
+        margin.frame.bottom = margin.frame.top;
+      }
+      // Divide the three sections along the frame height: 9 + 1 + 6 = 16.
+      // The width is 9:16, so the action area has sides 9:9 = square.
+      size = sizes.frame.width;
+      sizes.action = { width: size, height: size };
+      sizes.countdown = { width: size, height: Math.floor(size / 9) };
+      sizes.spell = { width: size, height: sizes.frame.height -
+          sizes.action.height - sizes.countdown.height };
+    }
 
     // Containers for the frame and its three sections.
     [ 'frame', 'action', 'countdown', 'spell' ].forEach(function (name) {
@@ -113,31 +152,32 @@ var Zorpodnix = (function () {
 
   function paintFrame() {
     var size = sizes.action.height,
-        radius = size / 2 / 9,
+        count = 5,
+        radius = size / 2 / count,
         context = contexts.action,
-        shape = shapes[0];
+        shape, i, x, y;
     context.clearRect(0, 0, size, size);
-    context.save();
-    context.translate(size / 2, size / 2);
-    context.scale(radius, radius);
-    shape.paint(context);
-    context.restore();
-  }
-
-  function makeShapes() {
-    shapePainters.forEach(function (shapePainter) {
-      colors.shapePalette.forEach(function (shapeColor) {
-        shapes.push(new Shape(shapePainter, shapeColor));
-      });
-    });
+    for (x = radius * 3 / 4; x < size; x += 2 * radius) {
+      for (y = radius * 3 / 4; y < size; y += 2 * radius) {
+        shape = shapes[Math.floor(Math.random() * shapes.length)];
+        context.save();
+        context.translate(x + radius, y + radius);
+        context.scale(radius, radius);
+        context.rotate(Math.random() * 2 * Math.PI);
+        shape.paint(context);
+        context.restore();
+      }
+    }
   }
 
   function load() {
-    makeLayout();
-    updateLayout();
-    window.onresize = updateLayout;
     makeShapes();
-    paintFrame();
+    makeLayout();
+    window.onresize = function () {
+      updateLayout();
+      paintFrame();
+    };
+    window.onresize();
   }
 
   return {

@@ -1,0 +1,35 @@
+
+-----
+In one game session, we challenge the player to learn a vocabulary of
+shape-syllable pairs. The size of the vocabulary depends on the difficulty
+setting of the game session. The player can choose among four settings:
+
+- tyro: 4 pairs
+- mage: 8 pairs
+- archmage: 16 pairs
+- oracle: 32 pairs
+
+
+-----
+Shape ideas
+
+snake, lizard, bird, mouse, frog, cat, bull
+cloud, lightning, tree, rose, grapes
+
+
+-----
+Color palettes
+
+To accommodate color-blindness and taste differences, we allow the player
+to choose a palette of five colors.
+
+
+-----
+Start game
+
+- the player selects a difficulty setting
+- the syllables are shuffled
+- the shapes are shuffled
+- the first n syllable-shape pairs are selected
+
+
