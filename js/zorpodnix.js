@@ -4,6 +4,14 @@ var Zorpodnix = (function () {
 
   var levels = [
       ],
+      layout = {
+        landscape: {
+          action: 'right'
+        },
+        portrait: {
+          action: 'bottom'
+        }
+      },
       sizes = {
       },
       shapePalettes = [
@@ -53,14 +61,9 @@ var Zorpodnix = (function () {
     // Full-window canvas.
     canvases.window.width = sizes.window.width;
     canvases.window.height = sizes.window.height;
-    
-    // TODO: give containers integer dimensions in order to fit canvases
-    // TODO: stack sections vertically in portrait layout
-    // TODO: put action section to the right (landscape) or bottom (portrait)
-    // TODO: make the layout configurable: left or right, top or bottom
 
     if (sizes.window.width > sizes.window.height) {
-      // Landscape layout. Calculate the maximal 16:9 frame.
+      layout.orientation = 'landscape';
       if (sizes.window.height * 16 / 9 < sizes.window.width) {
         // Full-height frame with margins to left and right.
         sizes.frame = { height: sizes.window.height };
@@ -84,7 +87,7 @@ var Zorpodnix = (function () {
       sizes.spell = { width: sizes.frame.width -
           sizes.action.width - sizes.countdown.width, height: size };
     } else {
-      // Portrait layout. Calculate the maximal 9:16 frame.
+      layout.orientation = 'portrait';
       if (sizes.window.height * 9 / 16 < sizes.window.width) {
         // Full-height frame with margins to left and right.
         sizes.frame = { height: sizes.window.height };
@@ -118,11 +121,39 @@ var Zorpodnix = (function () {
         canvases[name].height = sizes[name].height;
       }
     });
-    containers.frame.style.top = margin.frame.top + 'px';
-    containers.frame.style.left = margin.frame.left + 'px';
-    containers.countdown.style.left = sizes.action.width + 'px';
-    containers.spell.style.left = (sizes.action.width +
-        sizes.countdown.width) + 'px';
+    if (layout.orientation == 'landscape') {
+      containers.frame.style.left = margin.frame.left + 'px';
+      containers.frame.style.top = margin.frame.top + 'px';
+      containers.spell.style.top = containers.countdown.style.top =
+          containers.action.style.top = '0';
+      if (layout.landscape.action == 'left') {
+        containers.action.style.left = '0';
+        containers.countdown.style.left = sizes.action.width + 'px';
+        containers.spell.style.left = (sizes.action.width +
+            sizes.countdown.width) + 'px';
+      } else {
+        containers.spell.style.left = '0';
+        containers.countdown.style.left = sizes.spell.width + 'px';
+        containers.action.style.left = (sizes.spell.width +
+            sizes.countdown.width) + 'px';
+      }
+    } else {
+      containers.frame.style.left = margin.frame.left + 'px';
+      containers.frame.style.top = margin.frame.top + 'px';
+      containers.spell.style.left = containers.countdown.style.left =
+          containers.action.style.left = '0';
+      if (layout.portrait.action == 'top') {
+        containers.action.style.top = '0';
+        containers.countdown.style.top = sizes.action.height + 'px';
+        containers.spell.style.top = (sizes.action.height +
+            sizes.countdown.height) + 'px';
+      } else {
+        containers.spell.style.top = '0';
+        containers.countdown.style.top = sizes.spell.height + 'px';
+        containers.action.style.top = (sizes.spell.height +
+            sizes.countdown.height) + 'px';
+      }
+    }
   }
 
   function makeLayout() {
@@ -175,7 +206,7 @@ var Zorpodnix = (function () {
     makeLayout();
     window.onresize = function () {
       updateLayout();
-      paintFrame();
+      //paintFrame();
     };
     window.onresize();
   }
