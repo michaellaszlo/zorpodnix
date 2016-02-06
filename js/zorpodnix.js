@@ -68,7 +68,7 @@ var Zorpodnix = (function () {
   }
 
   function updateLayout() {
-    var size;
+    var actionSize, spellSize, gap, infoSize;
 
     sizes.window = {
       width: window.innerWidth,
@@ -96,13 +96,16 @@ var Zorpodnix = (function () {
         margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
         margin.frame.bottom = margin.frame.top;
       }
-      // Divide the three sections along the frame width: 9 + 1 + 6 = 16.
-      // The height is 9:16, so the action area has sides 9:9 = square.
-      size = sizes.frame.height;
-      sizes.action = { width: size, height: size };
-      sizes.countdown = { width: Math.floor(size / 9), height: size };
-      sizes.spell = { width: sizes.frame.width -
-          sizes.action.width - sizes.countdown.width, height: size };
+      // Divide along the frame width: 9 + 1 + 6 = 16.
+      // The height is 9:16, so the action area is a square (9:9).
+      // The spell area is also a square (6:6).
+      actionSize = sizes.frame.height;
+      spellSize = Math.floor(actionSize * 2 / 3);
+      gap = sizes.frame.width - actionSize - spellSize;
+      infoSize = actionSize - spellSize;
+      sizes.action = { width: actionSize, height: actionSize };
+      sizes.countdown = { width: gap, height: actionSize };
+      sizes.spell = { width: spellSize, height: spellSize };
     } else {
       layout.orientation = 'portrait';
       if (sizes.window.height * 9 / 16 < sizes.window.width) {
@@ -120,13 +123,16 @@ var Zorpodnix = (function () {
         margin.frame.top = (sizes.window.height - sizes.frame.height) / 2;
         margin.frame.bottom = margin.frame.top;
       }
-      // Divide the three sections along the frame height: 9 + 1 + 6 = 16.
-      // The width is 9:16, so the action area has sides 9:9 = square.
-      size = sizes.frame.width;
-      sizes.action = { width: size, height: size };
-      sizes.countdown = { width: size, height: Math.floor(size / 9) };
-      sizes.spell = { width: size, height: sizes.frame.height -
-          sizes.action.height - sizes.countdown.height };
+      // Divide along the frame height: 9 + 1 + 6 = 16.
+      // The width is 9:16, so the action area is a square (9:9).
+      // The spell area is also a square (6:6).
+      actionSize = sizes.frame.width;
+      spellSize = Math.floor(actionSize * 2 / 3);
+      gap = sizes.frame.height - actionSize - spellSize;
+      infoSize = actionSize - spellSize;
+      sizes.action = { width: actionSize, height: actionSize };
+      sizes.countdown = { width: actionSize, height: gap };
+      sizes.spell = { width: spellSize, height: spellSize };
     }
 
     // Containers for the frame and its three sections.
@@ -141,8 +147,8 @@ var Zorpodnix = (function () {
     if (layout.orientation == 'landscape') {
       containers.frame.style.left = margin.frame.left + 'px';
       containers.frame.style.top = margin.frame.top + 'px';
-      containers.spell.style.top = containers.countdown.style.top =
-          containers.action.style.top = '0';
+      containers.countdown.style.top = containers.action.style.top = '0';
+      containers.spell.style.top = infoSize + 'px';
       if (layout.landscape.action == 'left') {
         containers.action.style.left = '0';
         containers.countdown.style.left = sizes.action.width + 'px';
@@ -157,8 +163,8 @@ var Zorpodnix = (function () {
     } else {
       containers.frame.style.left = margin.frame.left + 'px';
       containers.frame.style.top = margin.frame.top + 'px';
-      containers.spell.style.left = containers.countdown.style.left =
-          containers.action.style.left = '0';
+      containers.countdown.style.left = containers.action.style.left = '0';
+      containers.spell.style.left = infoSize + 'px';
       if (layout.portrait.action == 'top') {
         containers.action.style.top = '0';
         containers.countdown.style.top = sizes.action.height + 'px';
