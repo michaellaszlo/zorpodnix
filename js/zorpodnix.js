@@ -4,10 +4,10 @@ var Zorpodnix = (function () {
 
   var levelSpecs = [
         {
-          numPairs: 4,
+          numPairs: 8,
           stageMaker: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 2, 3);
+            stage.numPairs = Math.min(stageIndex + 6, 6);
             return stage;
           }
         }
@@ -234,6 +234,22 @@ var Zorpodnix = (function () {
     }
   }
 
+  function paintSpell(shapes, syllables, weights) {
+    var numPairs = shapes.length,
+        context = contexts.spell,
+        size = sizes.spell.height,
+        span = size / numPairs,
+        i, x, y = 0;
+    for (i = 0; i < numPairs; ++i) {
+      y += span;
+      context.save();
+      context.translate(size / 4, y - span / 2);
+      context.scale(0.9 * span / 2, 0.9 * span / 2);
+      shapes[i].paint(context);
+      context.restore();
+    }
+  }
+
   function startStage(stageIndex) {
     var i;
     status.inStage = true;
@@ -243,6 +259,7 @@ var Zorpodnix = (function () {
     for (i = 0; i < stage.numPairs; ++i) {
       console.log(JSON.stringify(stage.shapes[i]), stage.syllables[i]);
     }
+    paintSpell(stage.shapes, stage.syllables);
   }
 
   function finishStage(success) {
