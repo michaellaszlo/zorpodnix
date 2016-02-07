@@ -6,7 +6,7 @@ In one game session, we challenge the player to learn a vocabulary of
 shape-syllable pairs. The size of the vocabulary depends on the difficulty
 level of the game session. The player can choose among four levels:
 
-- tyro: 4 pairs
+- novice: 4 pairs
 - mage: 8 pairs
 - archmage: 16 pairs
 - oracle: 32 pairs

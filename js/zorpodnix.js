@@ -7,7 +7,7 @@ var Zorpodnix = (function () {
           numPairs: 8,
           stageMaker: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 6, 6);
+            stage.numPairs = Math.min(stageIndex + 3, 5);
             return stage;
           }
         }
@@ -30,6 +30,12 @@ var Zorpodnix = (function () {
         },
         portrait: {
           action: 'bottom'
+        },
+        spell: {
+          spanFill: 0.9,
+          shapeOriginX: 1 / 3.5,
+          highlightWeight: 1.5,
+          fontFactor: 0.8
         }
       },
       sizes = {
@@ -177,6 +183,7 @@ var Zorpodnix = (function () {
             sizes.countdown.height) + 'px';
       }
     }
+    paintFrame();
   }
 
   function makeLayout() {
@@ -205,22 +212,11 @@ var Zorpodnix = (function () {
   }
 
   function paintFrame() {
-    var size = sizes.action.height,
-        count = 5,
-        radius = size / 2 / count,
-        context = contexts.action,
-        shape, i, x, y;
-    context.clearRect(0, 0, size, size);
-    for (x = radius * 3 / 4; x < size; x += 2 * radius) {
-      for (y = radius * 3 / 4; y < size; y += 2 * radius) {
-        shape = shapes[Math.floor(Math.random() * shapes.length)];
-        context.save();
-        context.translate(x + radius, y + radius);
-        context.scale(radius, radius);
-        context.rotate(Math.random() * 2 * Math.PI);
-        shape.paint(context);
-        context.restore();
-      }
+    var weights = {},
+        index = Math.floor(Math.random() * stage.numPairs);
+    weights[index] = layout.spell.highlightWeight;
+    if (stage.shapes) {
+      paintSpell(stage.shapes, stage.syllables, weights);
     }
   }
 
@@ -238,13 +234,28 @@ var Zorpodnix = (function () {
     var numPairs = shapes.length,
         context = contexts.spell,
         size = sizes.spell.height,
-        span = size / numPairs,
+        spanFill = layout.spell.spanFill,
+        shapeX = size * layout.spell.shapeOriginX,
+        totalWeight,
+        weight,
+        normalSpan,
+        span,
         i, x, y = 0;
+    totalWeight = numPairs;
+    if (weights) {
+      Object.keys(weights).forEach(function (index) {
+        totalWeight += weights[index] - 1;
+      });
+    } else {
+      weights = {};
+    }
+    normalSpan = size / totalWeight;
     for (i = 0; i < numPairs; ++i) {
+      span = normalSpan * (i in weights ? weights[i] : 1);
       y += span;
       context.save();
-      context.translate(size / 4, y - span / 2);
-      context.scale(0.9 * span / 2, 0.9 * span / 2);
+      context.translate(shapeX, y - span / 2);
+      context.scale(spanFill * span / 2, spanFill * span / 2);
       shapes[i].paint(context);
       context.restore();
     }
@@ -259,7 +270,6 @@ var Zorpodnix = (function () {
     for (i = 0; i < stage.numPairs; ++i) {
       console.log(JSON.stringify(stage.shapes[i]), stage.syllables[i]);
     }
-    paintSpell(stage.shapes, stage.syllables);
   }
 
   function finishStage(success) {
@@ -292,6 +302,7 @@ var Zorpodnix = (function () {
     };
     window.onresize();
     startLevel(0);
+    paintFrame();
   }
 
   return {

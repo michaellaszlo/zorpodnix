@@ -13,16 +13,14 @@ body, div, canvas {
   background: #000;
 }
 #frameContainer {
-  background: #fff;
+  background: #eee;
 }
-/*
 #actionContainer {
   background: #888;
 }
 #countdownContainer {
-  background: #eee;
+  background: #ddd;
 }
 #spellContainer {
-  background: #bbb;
+  background: #fff;
 }
-*/
