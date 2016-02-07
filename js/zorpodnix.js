@@ -1,4 +1,3 @@
-
 var Zorpodnix = (function () {
   'use strict';
 
@@ -7,7 +6,7 @@ var Zorpodnix = (function () {
           numPairs: 8,
           stageMaker: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 5, 5);
+            stage.numPairs = Math.min(stageIndex + 2, 6);
             return stage;
           }
         }
@@ -33,10 +32,10 @@ var Zorpodnix = (function () {
         },
         spell: {
           spanFill: 0.9,
-          shapeOriginX: 2.25 / 7,
-          syllableOriginX: 4.75 / 7,
           highlightWeight: 1.5,
-          fontFactor: 0.75,
+          syllableFactorY: 1 / 4,
+          syllableFactorX: 4 / 5,
+          fontFactor: 1 / 8,
           fontColor: '#444',
           fontFamily: "'Bubblegum Sans', sans-serif"
         }
@@ -216,9 +215,8 @@ var Zorpodnix = (function () {
   }
 
   function paintFrame() {
-    var weights = {},
-        index = Math.floor(Math.random() * stage.numPairs);
-    weights[index] = layout.spell.highlightWeight;
+    var weights = {};
+    weights[stage.syllableIndex] = layout.spell.highlightWeight;
     if (stage.shapes) {
       paintSpell(stage.shapes, stage.syllables, weights);
     }
@@ -239,14 +237,16 @@ var Zorpodnix = (function () {
         context = contexts.spell,
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
-        shapeX = size * layout.spell.shapeOriginX,
-        syllableX = size * layout.spell.syllableOriginX,
+        shapeX,
+        syllableX,
         totalWeight,
         weight,
         normalSpan,
+        highlightSpan,
         span,
+        fontSize,
         textWidth,
-        i, x, y = 0;
+        i, x, y;
     totalWeight = numPairs;
     if (weights) {
       Object.keys(weights).forEach(function (index) {
@@ -256,7 +256,15 @@ var Zorpodnix = (function () {
       weights = {};
     }
     normalSpan = size / totalWeight;
+    highlightSpan = layout.spell.highlightWeight * normalSpan;
+    shapeX = Math.max(highlightSpan / 2,
+        (size - spanFill * highlightSpan) / 2);
+    fontSize = layout.spell.fontFactor * size;
+    syllableX = shapeX + highlightSpan / 2 +
+        layout.spell.syllableFactorX * fontSize;
+    contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
     context.clearRect(0, 0, size, size);
+    y = 0;
     for (i = 0; i < numPairs; ++i) {
       span = normalSpan * (i in weights ? weights[i] : 1);
       y += span;
@@ -265,13 +273,11 @@ var Zorpodnix = (function () {
       context.scale(spanFill * span / 2, spanFill * span / 2);
       shapes[i].paint(context);
       context.restore();
-      contexts.spell.font = span * layout.spell.fontFactor + 'px ' +
-          layout.spell.fontFamily;
       textWidth = context.measureText(syllables[i]).width;
       context.fillStyle = layout.spell.fontColor;
       context.fillText(syllables[i],
-          syllableX - textWidth / 2, y - span / 3);
-      console.log(syllableX - textWidth / 2, y);
+          syllableX - textWidth / 2,
+          y - span / 2 + layout.spell.syllableFactorY * fontSize);
     }
   }
 
@@ -281,9 +287,7 @@ var Zorpodnix = (function () {
     stage = level.stageMaker(stageIndex);
     stage.shapes = level.shapes.slice(0, stage.numPairs);
     stage.syllables = level.syllables.slice(0, stage.numPairs);
-    for (i = 0; i < stage.numPairs; ++i) {
-      console.log(JSON.stringify(stage.shapes[i]), stage.syllables[i]);
-    }
+    stage.syllableIndex = Math.floor(Math.random() * stage.numPairs);
   }
 
   function finishStage(success) {
@@ -322,9 +326,9 @@ var Zorpodnix = (function () {
 
   return {
     load: load,
+    updateLayout: updateLayout,
     addShapePainter: addShapePainter,
     setSyllables: setSyllables
   };
 })(); // end Zorpodnix
-
 window.onload = Zorpodnix.load;
