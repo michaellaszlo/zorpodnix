@@ -7,7 +7,7 @@ var Zorpodnix = (function () {
           numPairs: 8,
           stageMaker: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 3, 5);
+            stage.numPairs = Math.min(stageIndex + 5, 5);
             return stage;
           }
         }
@@ -33,9 +33,12 @@ var Zorpodnix = (function () {
         },
         spell: {
           spanFill: 0.9,
-          shapeOriginX: 1 / 3.5,
+          shapeOriginX: 2.25 / 7,
+          syllableOriginX: 4.75 / 7,
           highlightWeight: 1.5,
-          fontFactor: 0.8
+          fontFactor: 0.75,
+          fontColor: '#444',
+          fontFamily: "'Bubblegum Sans', sans-serif"
         }
       },
       sizes = {
@@ -183,6 +186,7 @@ var Zorpodnix = (function () {
             sizes.countdown.height) + 'px';
       }
     }
+
     paintFrame();
   }
 
@@ -236,10 +240,12 @@ var Zorpodnix = (function () {
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
         shapeX = size * layout.spell.shapeOriginX,
+        syllableX = size * layout.spell.syllableOriginX,
         totalWeight,
         weight,
         normalSpan,
         span,
+        textWidth,
         i, x, y = 0;
     totalWeight = numPairs;
     if (weights) {
@@ -250,6 +256,7 @@ var Zorpodnix = (function () {
       weights = {};
     }
     normalSpan = size / totalWeight;
+    context.clearRect(0, 0, size, size);
     for (i = 0; i < numPairs; ++i) {
       span = normalSpan * (i in weights ? weights[i] : 1);
       y += span;
@@ -258,6 +265,13 @@ var Zorpodnix = (function () {
       context.scale(spanFill * span / 2, spanFill * span / 2);
       shapes[i].paint(context);
       context.restore();
+      contexts.spell.font = span * layout.spell.fontFactor + 'px ' +
+          layout.spell.fontFamily;
+      textWidth = context.measureText(syllables[i]).width;
+      context.fillStyle = layout.spell.fontColor;
+      context.fillText(syllables[i],
+          syllableX - textWidth / 2, y - span / 3);
+      console.log(syllableX - textWidth / 2, y);
     }
   }
 
@@ -303,6 +317,7 @@ var Zorpodnix = (function () {
     window.onresize();
     startLevel(0);
     paintFrame();
+    setTimeout(paintFrame, 300);
   }
 
   return {
