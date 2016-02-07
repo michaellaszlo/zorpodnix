@@ -6,7 +6,7 @@ var Zorpodnix = (function () {
           numPairs: 8,
           stageMaker: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 2, 6);
+            stage.numPairs = Math.min(stageIndex + 3, 6);
             return stage;
           }
         }
@@ -36,7 +36,8 @@ var Zorpodnix = (function () {
           syllableFactorY: 1 / 4,
           syllableFactorX: 4 / 5,
           fontFactor: 1 / 8,
-          fontColor: '#444',
+          passiveGray: 0.5,
+          activeGray: 0.1,
           fontFamily: "'Bubblegum Sans', sans-serif"
         }
       },
@@ -216,7 +217,7 @@ var Zorpodnix = (function () {
 
   function paintFrame() {
     var weights = {};
-    weights[stage.syllableIndex] = layout.spell.highlightWeight;
+    weights[stage.syllableIndex] = 1;
     if (stage.shapes) {
       paintSpell(stage.shapes, stage.syllables, weights);
     }
@@ -232,31 +233,45 @@ var Zorpodnix = (function () {
     }
   }
 
-  function paintSpell(shapes, syllables, weights) {
+  function paintSpell(shapes, syllables, highlighted) {
     var numPairs = shapes.length,
         context = contexts.spell,
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
+        highlightWeight = layout.spell.highlightWeight,
+        weights = new Array(numPairs),
+        weight,
         shapeX,
         syllableX,
         totalWeight,
-        weight,
         normalSpan,
         highlightSpan,
         span,
         fontSize,
         textWidth,
+        passiveGray = Math.floor(layout.spell.passiveGray * 256),
+        activeGray = Math.floor(layout.spell.activeGray * 256),
+        gray,
+        normalTextColor =
+            'rgb(' + [ passiveGray, passiveGray, passiveGray ].join(', ') + ')',
+        textColors = new Array(numPairs),
         i, x, y;
+    for (i = 0; i < numPairs; ++i) {
+      weights[i] = 1;
+      textColors[i] = normalTextColor;
+    }
     totalWeight = numPairs;
-    if (weights) {
-      Object.keys(weights).forEach(function (index) {
-        totalWeight += weights[index] - 1;
+    if (highlighted) {
+      Object.keys(highlighted).forEach(function (index) {
+        weight = highlighted[index] * highlightWeight;
+        weights[index] = weight;
+        totalWeight += weight - 1;
+        gray = Math.floor(passiveGray - weight * (passiveGray - activeGray));
+        textColors[index] = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
       });
-    } else {
-      weights = {};
     }
     normalSpan = size / totalWeight;
-    highlightSpan = layout.spell.highlightWeight * normalSpan;
+    highlightSpan = highlightWeight * normalSpan;
     shapeX = Math.max(highlightSpan / 2,
         (size - spanFill * highlightSpan) / 2);
     fontSize = layout.spell.fontFactor * size;
@@ -266,7 +281,7 @@ var Zorpodnix = (function () {
     context.clearRect(0, 0, size, size);
     y = 0;
     for (i = 0; i < numPairs; ++i) {
-      span = normalSpan * (i in weights ? weights[i] : 1);
+      span = normalSpan * weights[i];
       y += span;
       context.save();
       context.translate(shapeX, y - span / 2);
@@ -274,7 +289,7 @@ var Zorpodnix = (function () {
       shapes[i].paint(context);
       context.restore();
       textWidth = context.measureText(syllables[i]).width;
-      context.fillStyle = layout.spell.fontColor;
+      context.fillStyle = textColors[i];
       context.fillText(syllables[i],
           syllableX - textWidth / 2,
           y - span / 2 + layout.spell.syllableFactorY * fontSize);
