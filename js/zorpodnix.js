@@ -220,11 +220,33 @@ var Zorpodnix = (function () {
   }
 
   function paintFrame() {
-    var weights = {};
-    weights[stage.syllablePosition] = 1;
-    if (stage.spellShapes) {
-      paintSpell(stage.spellShapes, stage.spellSyllables, weights);
+    var context,
+        size,
+        scale,
+        weights = {};
+    if (!status.inStage) {
+      return;
     }
+
+    // Spell.
+    weights[stage.syllablePosition] = 1;
+    paintSpell(stage.spellShapes, stage.spellSyllables, weights);
+
+    // Action.
+    context = contexts.action;
+    size = sizes.action.width;
+    scale = size / stage.numCols / 2;
+    stage.actionShapes.forEach(function (shape, index) {
+      var position = stage.actionPositions[index],
+          x = position.x,
+          y = position.y;
+      context.save();
+      context.translate(x * size, y * size);
+      context.scale(0.95 * scale, 0.95 * scale);
+      shape.paint(context);
+      context.restore();
+    });
+
   }
 
   function shuffle(things) {
@@ -303,8 +325,8 @@ var Zorpodnix = (function () {
   function startStage(stageIndex) {
     var spellSize,
         spellIndices,
-        i, j;
-    status.inStage = true;
+        i, j,
+        numCols;
 
     // The stage initializer sets the spell size.
     stage = level.stageInitializer(stageIndex);
@@ -333,16 +355,19 @@ var Zorpodnix = (function () {
     while (i < stage.decoyShapes.length) {
       stage.decoyShapes[i++] = level.shapesOutsideLevel[j++];
     }
-    console.log('spell shapes:');
-    stage.spellShapes.forEach(function (shape) {
-      console.log(' ', shape.name, shape.fillColor);
-    });
-    console.log('decoy shapes:');
-    stage.decoyShapes.forEach(function (shape) {
-      console.log(' ', shape.name, shape.fillColor);
+
+    // Action shapes: a shuffled array of spell shapes and decoy shapes.
+    stage.actionShapes = stage.spellShapes.concat(stage.decoyShapes);
+    shuffle(stage.actionShapes);
+    numCols = Math.ceil(Math.sqrt(stage.actionShapes.length));
+    stage.numCols = numCols;
+    stage.actionPositions = stage.actionShapes.map(function (shape, index) {
+      var c = index % numCols, r  = (index - c) / numCols;
+      return { x: (c + 0.5) / numCols, y: (r + 0.5) / numCols };
     });
 
     stage.syllablePosition = 0;
+    status.inStage = true;
   }
 
   function finishStage(success) {
@@ -374,10 +399,8 @@ var Zorpodnix = (function () {
     window.onresize = function () {
       updateLayout();
     };
-    window.onresize();
     startLevel(0);
-    paintFrame();
-    setTimeout(paintFrame, 300);
+    setTimeout(updateLayout, 200);
   }
 
   return {

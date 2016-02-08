@@ -9,6 +9,7 @@ body, div, canvas {
   overflow: hidden;
 }
 
+/*
 #windowCanvas {
   background: #fff;
 }
@@ -16,7 +17,7 @@ body, div, canvas {
   background: #f4f4f4;
 }
 #actionContainer {
-  background: #bbb;
+  background: #444;
 }
 #countdownContainer {
   background: #f4f4f4;
@@ -24,3 +25,4 @@ body, div, canvas {
 #spellContainer {
   background: #fff;
 }
+*/
