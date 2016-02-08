@@ -4,9 +4,9 @@ var Zorpodnix = (function () {
   var levelSpecs = [
         {
           numPairs: 8,
-          stageMaker: function (stageIndex) {
+          stageInitializer: function (stageIndex) {
             var stage = {};
-            stage.numPairs = Math.min(stageIndex + 3, 6);
+            stage.spellSize = Math.min(stageIndex + 3, 6);
             return stage;
           }
         }
@@ -20,6 +20,7 @@ var Zorpodnix = (function () {
         shapePalette: shapePalettes[0]
       },
       shapePainters = [],
+      shapeNames = [],
       shapes = [],
       syllables,
       spellLength,
@@ -49,29 +50,32 @@ var Zorpodnix = (function () {
       contexts = {},
       status = {};
 
-  function addShapePainter(shape) {
-    shapePainters.push(shape);
+  function addShapePainter(name, painter) {
+    shapePainters.push(painter);
+    shapeNames.push(name);
   }
 
   function setSyllables(someSyllables) {
     syllables = someSyllables;
   }
 
-  function Shape(shapePainter, fillColor) {
-    this.shapePainter = shapePainter;
+  function Shape(name, painter, fillColor) {
+    this.name = name;
+    this.painter = painter;
     this.fillColor = fillColor;
   }
   Shape.prototype.paint = function (context) {
     context.save();
     context.fillStyle = this.fillColor;
-    this.shapePainter(context);
+    this.painter(context);
     context.restore();
   };
 
   function makeShapes() {
-    shapePainters.forEach(function (shapePainter) {
-      colors.shapePalette.forEach(function (shapeColor) {
-        shapes.push(new Shape(shapePainter, shapeColor));
+    shapePainters.forEach(function (painter, index) {
+      var name = shapeNames[index];
+      colors.shapePalette.forEach(function (color) {
+        shapes.push(new Shape(name, painter, color));
       });
     });
   }
@@ -217,9 +221,9 @@ var Zorpodnix = (function () {
 
   function paintFrame() {
     var weights = {};
-    weights[stage.syllableIndex] = 1;
-    if (stage.shapes) {
-      paintSpell(stage.shapes, stage.syllables, weights);
+    weights[stage.syllablePosition] = 1;
+    if (stage.spellShapes) {
+      paintSpell(stage.spellShapes, stage.spellSyllables, weights);
     }
   }
 
@@ -297,12 +301,48 @@ var Zorpodnix = (function () {
   }
 
   function startStage(stageIndex) {
-    var i;
+    var spellSize,
+        spellIndices,
+        i, j;
     status.inStage = true;
-    stage = level.stageMaker(stageIndex);
-    stage.shapes = level.shapes.slice(0, stage.numPairs);
-    stage.syllables = level.syllables.slice(0, stage.numPairs);
-    stage.syllableIndex = Math.floor(Math.random() * stage.numPairs);
+
+    // The stage initializer sets the spell size.
+    stage = level.stageInitializer(stageIndex);
+    spellSize = stage.spellSize;
+
+    // Select the shape-syllable pairs to be used in the spell.
+    spellIndices = new Array(spellSize);
+    for (i = 0; i < spellSize; ++i) {
+      spellIndices[i] = i;
+    }
+    stage.spellShapes = new Array(spellSize);
+    stage.spellSyllables = new Array(spellSize);
+    for (i = 0; i < spellSize; ++i) {
+      stage.spellShapes[i] = level.shapes[spellIndices[i]];
+      stage.spellSyllables[i] = level.syllables[spellIndices[i]];
+    }
+
+    // Select decoy shapes to be used in the action area.
+    // Take some decoys among the level shapes.
+    stage.decoyShapes = new Array(2 * spellSize);
+    for (i = 0; i < spellSize && spellSize + i < level.numPairs; ++i) {
+      stage.decoyShapes[i] = level.shapes[spellSize + i];
+    }
+    // Take the rest outside the level shapes.
+    j = 0;
+    while (i < stage.decoyShapes.length) {
+      stage.decoyShapes[i++] = level.shapesOutsideLevel[j++];
+    }
+    console.log('spell shapes:');
+    stage.spellShapes.forEach(function (shape) {
+      console.log(' ', shape.name, shape.fillColor);
+    });
+    console.log('decoy shapes:');
+    stage.decoyShapes.forEach(function (shape) {
+      console.log(' ', shape.name, shape.fillColor);
+    });
+
+    stage.syllablePosition = 0;
   }
 
   function finishStage(success) {
@@ -314,11 +354,12 @@ var Zorpodnix = (function () {
         i;
     levelSpec = levelSpecs[levelIndex];
     level.numPairs = levelSpec.numPairs;
-    level.stageMaker = levelSpec.stageMaker;
+    level.stageInitializer = levelSpec.stageInitializer;
     shuffle(shapes);
     shuffle(syllables);
     level.shapes = shapes.slice(0, level.numPairs);
     level.syllables = syllables.slice(0, level.numPairs);
+    level.shapesOutsideLevel = shapes.slice(level.numPairs);
     status.inLevel = true;
     startStage(0);
   }
