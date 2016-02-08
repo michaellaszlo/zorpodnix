@@ -3,12 +3,17 @@ var Zorpodnix = (function () {
 
   var levelSpecs = [
         {
-          numPairs: 8,
-          stageInitializer: function (stageIndex) {
-            var stage = {};
-            stage.spellSize = 3;
-            return stage;
-          }
+          numPairs: 4,
+          stages: [
+            { show: [ 0, 1, 2 ] },
+            { show: [ 1, 2 ], test: [ 0 ] },
+            { show: [ 0, 3 ], test: [ 1 ] },
+            { show: [ 3 ], test: [ 1, 2 ] },
+            { test: [ 0, 1, 3 ] },
+            { test: [ 0, 2, 3 ] },
+            { test: [ 1, 2, 3 ] },
+            { test: [ 0, 1, 2 ] }
+          ]
         }
       ],
       countdown = {
@@ -326,19 +331,28 @@ var Zorpodnix = (function () {
 
   function startStage(stageIndex) {
     var spellSize,
-        spellIndices,
+        spellIndices = [],
+        shown = {},
         i, j,
         numCols;
 
-    // The stage initializer sets the spell size.
-    stage = level.stageInitializer(stageIndex);
-    spellSize = stage.spellSize;
-
-    // Select the shape-syllable pairs to be used in the spell.
-    spellIndices = new Array(spellSize);
-    for (i = 0; i < spellSize; ++i) {
-      spellIndices[i] = i;
+    // Read the indices of the syllables that compose the spell.
+    stage = level.stages[stageIndex];
+    if (stage.show) {
+      stage.show.forEach(function (index) {
+        spellIndices.push(index);
+        shown[index] = true;
+      });
     }
+    if (stage.test) {
+      stage.test.forEach(function (index) {
+        spellIndices.push(index);
+      });
+    }
+    spellSize = spellIndices.length;
+    shuffle(spellIndices);
+
+    // Get the corresponding shapes.
     stage.spellShapes = new Array(spellSize);
     stage.spellSyllables = new Array(spellSize);
     for (i = 0; i < spellSize; ++i) {
@@ -381,7 +395,7 @@ var Zorpodnix = (function () {
         i;
     levelSpec = levelSpecs[levelIndex];
     level.numPairs = levelSpec.numPairs;
-    level.stageInitializer = levelSpec.stageInitializer;
+    level.stages = levelSpec.stages;
     shuffle(shapes);
     shuffle(syllables);
     level.shapes = shapes.slice(0, level.numPairs);
