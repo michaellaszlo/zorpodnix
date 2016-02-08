@@ -156,11 +156,15 @@ var Zorpodnix = (function () {
       sizes.countdown = { width: actionSize, height: gap };
       sizes.spell = { width: spellSize, height: spellSize };
     }
+    sizes.touch = sizes.action;
 
     // Containers for the frame and its three sections.
-    [ 'frame', 'action', 'countdown', 'spell' ].forEach(function (name) {
-      containers[name].style.width = sizes[name].width + 'px';
-      containers[name].style.height = sizes[name].height + 'px';
+    [ 'frame', 'action', 'touch', 'countdown', 'spell'
+    ].forEach(function (name) {
+      if (name in containers) {
+        containers[name].style.width = sizes[name].width + 'px';
+        containers[name].style.height = sizes[name].height + 'px';
+      }
       if (name !== 'frame') {
         canvases[name].width = sizes[name].width;
         canvases[name].height = sizes[name].height;
@@ -200,7 +204,7 @@ var Zorpodnix = (function () {
       }
     }
 
-    offsets.action = calculateOffset(document.body, containers.action);
+    offsets.touch = calculateOffset(document.body, canvases.action);
   }
 
   function calculateOffset(root, child) {
@@ -224,12 +228,19 @@ var Zorpodnix = (function () {
     containers.frame = document.createElement('div');
     containers.frame.id = 'frameContainer';
     document.body.appendChild(containers.frame);
-    [ 'action', 'countdown', 'spell' ].forEach(function (name) {
+    [ 'spell', 'countdown', 'action' ].forEach(function (name) {
       var container = containers[name] = document.createElement('div'),
           canvas = canvases[name] = document.createElement('canvas');
       container.appendChild(canvas);
       containers.frame.appendChild(container);
       container.id = name + 'Container';
+      canvas.id = name + 'Canvas';
+    });
+
+    // Layers over the base action canvas.
+    [ 'touch' ].forEach(function (name) {
+      var canvas = canvases[name] = document.createElement('canvas');
+      containers.action.appendChild(canvas);
       canvas.id = name + 'Canvas';
     });
 
@@ -421,20 +432,11 @@ var Zorpodnix = (function () {
     status.inLevel = false;
   }
 
-  function handleTouch(event) {
-    var position = event.center,
-        x = position.x,
-        y = position.y,
-        canvas = canvas;
-    console.log(this, x, y);
-  }
-
   function configureHammer() {
-    var canvas = canvases.action,
-        actionHammer = new Hammer(canvas);
+    var actionHammer = new Hammer(canvases.touch);
     function handleTouch(event) {
       var canvasPosition = event.center,
-          offset = offsets.action,
+          offset = offsets.touch,
           x = canvasPosition.x - event.deltaX - offset.x,
           y = canvasPosition.y - event.deltaY - offset.y;
       console.log(event.type, x, y);
