@@ -54,6 +54,7 @@ var Zorpodnix = (function () {
       },
       margin = {},
       containers = {},
+      offsets = {},
       canvases = {},
       contexts = {},
       status = {};
@@ -199,7 +200,18 @@ var Zorpodnix = (function () {
       }
     }
 
-    paintFrame();
+    offsets.action = calculateOffset(document.body, containers.action);
+  }
+
+  function calculateOffset(root, child) {
+    var x = 0,
+        y = 0;
+    while (child != root) {
+      x += child.offsetLeft;
+      y += child.offsetTop;
+      child = child.offsetParent;
+    }
+    return { x: x, y: y };
   }
 
   function makeLayout() {
@@ -409,19 +421,44 @@ var Zorpodnix = (function () {
     status.inLevel = false;
   }
 
+  function handleTouch(event) {
+    var position = event.center,
+        x = position.x,
+        y = position.y,
+        canvas = canvas;
+    console.log(this, x, y);
+  }
+
+  function configureHammer() {
+    var canvas = canvases.action,
+        actionHammer = new Hammer(canvas);
+    function handleTouch(event) {
+      var canvasPosition = event.center,
+          offset = offsets.action,
+          x = canvasPosition.x - offset.x,
+          y = canvasPosition.y - offset.y;
+      console.log(canvasPosition, offset, x, y);
+    }
+    actionHammer.on('tap', handleTouch);
+  }
+
+  function resize() {
+    updateLayout();
+    paintFrame();
+  }
+
   function load() {
     makeShapes();
     makeLayout();
-    window.onresize = function () {
-      updateLayout();
-    };
+    configureHammer();
+    window.onresize = resize;
+    setTimeout(resize, 200);
     startLevel(0);
-    setTimeout(updateLayout, 200);
   }
 
   return {
     load: load,
-    updateLayout: updateLayout,
+    resize: resize,
     addShapePainter: addShapePainter,
     setSyllables: setSyllables
   };
