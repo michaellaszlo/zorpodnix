@@ -2,11 +2,12 @@
 -----
 Levels
 
-In one game session, we challenge the player to learn a vocabulary of
-shape-syllable pairs. The size of the vocabulary depends on the difficulty
-level of the game session. The player can choose among four levels:
+In one game session, we challenge you to learn a randomly generated
+vocabulary of shape-syllable pairs. The size of the vocabulary depends
+on the difficulty level of the game session. You can choose among
+four levels:
 
-- novice: 4 pairs
+- novice: 4 pairs (tutorial level with tool tips)
 - mage: 8 pairs
 - archmage: 16 pairs
 - oracle: 32 pairs
@@ -15,16 +16,55 @@ level of the game session. The player can choose among four levels:
 -----
 Stages
 
-To complete a level, the player must pass a sequence of increasingly
-difficult stages. Early stages introduce shape-syllable pairs. Later
-stages increasingly hide shapes, requiring the player to recall the
-corresponding shapes.
+To complete a level, you must pass a sequence of stages that teach
+shape-syllable pairs and test your recall of the pairs.
+
+A stage displays a spell consisting of three syllables, each of which
+corresponds to a shape. The syllables are highlighted one after the
+other and you have to tap the matching shape in the action area. This
+is easy to do when the correct shape is shown next to the syllable.
+
+When the shape is hidden, you must recall the correct shape from an
+earlier stage when it was shown. The stages progress in such a way that
+a shape-syllable pair is shown twice before the shape is hidden.
+
+A twenty-second timer runs during each stage. If you don't complete the
+required actions within that time, you fail the stage.
+
+
+-----
+Penalties
+
+You start out with three stars. Each failed stage costs you a star. After
+three penalties, you can continue playing the level and you may fail as
+many stages as you like. However, if you want to complete the level with
+stars, you must bail out of the level and start a new one.
+
+Another consequence of failing a stage is that you are sent back two
+stages. In the stage sequence A, B, C, if you fail stage C, you are
+sent back to stage A. This has a cost because you have to do more work
+to complete the level, but it is also a benefit because repeating the
+last two stages reinforces your memory of the shapes they introduce.
+
+
+-----
+Stage progression
+
+novice:
+  A B C
+  a B C
+  A b   D
+    b c D
+  a b   d
+  a   c d
+    b c d
+  a b c
 
 
 -----
 Shapes
 
-gecko, bird, mouse
+lizard, bird, mouse
 frog, cat, bull
 heart, hand, foot
 tree, rose, grapes

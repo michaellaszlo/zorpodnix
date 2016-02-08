@@ -6,11 +6,14 @@ var Zorpodnix = (function () {
           numPairs: 8,
           stageInitializer: function (stageIndex) {
             var stage = {};
-            stage.spellSize = Math.min(stageIndex + 3, 6);
+            stage.spellSize = 3;
             return stage;
           }
         }
       ],
+      countdown = {
+        total: 20
+      },
       level = {},
       stage = {},
       shapePalettes = [
@@ -34,12 +37,12 @@ var Zorpodnix = (function () {
         spell: {
           spanFill: 0.9,
           highlightWeight: 1.5,
-          syllableFactorY: 1 / 4,
-          syllableFactorX: 4 / 5,
-          fontFactor: 1 / 8,
-          passiveGray: 0.5,
+          syllableFactorY: 0.36,
+          syllableFactorX: -0.075,
+          fontFactor: 0.19,
+          passiveGray: 0.6,
           activeGray: 0.1,
-          fontFamily: "'Bubblegum Sans', sans-serif"
+          fontFamily: "'Bitter', sans-serif"
         }
       },
       sizes = {
@@ -301,8 +304,7 @@ var Zorpodnix = (function () {
     shapeX = Math.max(highlightSpan / 2,
         (size - spanFill * highlightSpan) / 2);
     fontSize = layout.spell.fontFactor * size;
-    syllableX = shapeX + highlightSpan / 2 +
-        layout.spell.syllableFactorX * fontSize;
+    syllableX = (size / 2) * (1 + layout.spell.syllableFactorX);
     contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
     context.clearRect(0, 0, size, size);
     y = 0;
@@ -317,7 +319,7 @@ var Zorpodnix = (function () {
       textWidth = context.measureText(syllables[i]).width;
       context.fillStyle = textColors[i];
       context.fillText(syllables[i],
-          syllableX - textWidth / 2,
+          syllableX + (size - syllableX - textWidth) / 2,
           y - span / 2 + layout.spell.syllableFactorY * fontSize);
     }
   }
@@ -346,7 +348,7 @@ var Zorpodnix = (function () {
 
     // Select decoy shapes to be used in the action area.
     // Take some decoys among the level shapes.
-    stage.decoyShapes = new Array(2 * spellSize);
+    stage.decoyShapes = new Array(3 * spellSize);
     for (i = 0; i < spellSize && spellSize + i < level.numPairs; ++i) {
       stage.decoyShapes[i] = level.shapes[spellSize + i];
     }
