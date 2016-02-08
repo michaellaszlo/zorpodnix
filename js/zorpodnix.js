@@ -435,11 +435,12 @@ var Zorpodnix = (function () {
     function handleTouch(event) {
       var canvasPosition = event.center,
           offset = offsets.action,
-          x = canvasPosition.x - offset.x,
-          y = canvasPosition.y - offset.y;
-      console.log(canvasPosition, offset, x, y);
+          x = canvasPosition.x - event.deltaX - offset.x,
+          y = canvasPosition.y - event.deltaY - offset.y;
+      console.log(event.type, x, y);
     }
-    actionHammer.on('tap', handleTouch);
+    actionHammer.get('swipe').set({ direction: Hammer.DIRECTION_ALL });
+    actionHammer.on('tap press swipe', handleTouch);
   }
 
   function resize() {
