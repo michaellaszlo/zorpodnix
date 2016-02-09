@@ -444,18 +444,16 @@ var Zorpodnix = (function () {
     document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
   }
 
-  function handleTouch(event) {
-    var pagePosition = event.center,
-        offset = offsets.touch,
-        x = pagePosition.x - event.deltaX - offset.x,
-        y = pagePosition.y - event.deltaY - offset.y,
+  function handleTap(x, y) {
+    var offset = offsets.touch,
         context = contexts.touch,
         canvas = canvases.touch,
         width = canvas.width, height = canvas.height;
+    x -= offset.x;
+    y -= offset.y;
     if (x < 0 || x > width || y < 0 || y > height) {
       return;
     }
-    //console.log(event.type, x, y);
     context.clearRect(0, 0, width, height);
     context.beginPath();
     context.arc(x, y, sizes.spellShapeSpan / 4, 0, 2 * Math.PI);
@@ -463,10 +461,18 @@ var Zorpodnix = (function () {
     context.fill();
   }
 
-  function configureHammer() {
-    var actionHammer = new Hammer(document.body);
-    actionHammer.get('swipe').set({ direction: Hammer.DIRECTION_ALL });
-    actionHammer.on('tap press swipe', handleTouch);
+  function configureTap() {
+    document.body.ontouchstart = function (event) {
+      var touch;
+      if (event.targetTouches.length > 1) {
+        return;
+      }
+      touch = event.targetTouches[0];
+      handleTap(touch.pageX, touch.pageY);
+    };
+    document.body.onmousedown = function (event) {
+      handleTap(event.pageX, event.pageY);
+    };
   }
 
   function resize() {
@@ -477,7 +483,7 @@ var Zorpodnix = (function () {
   function load() {
     makeShapes();
     makeLayout();
-    configureHammer();
+    configureTap();
     window.onresize = resize;
     setTimeout(resize, 200);
     startLevel(0);
