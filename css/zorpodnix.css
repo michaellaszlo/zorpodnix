@@ -9,6 +9,15 @@ body, div, canvas {
   overflow: hidden;
 }
 
+#debug {
+  font-family: sans-serif;
+  font-size: 15px;
+  color: #333;
+}
+
+#touchCanvas {
+  opacity: 0.5;
+}
 /*
 #windowCanvas {
   background: #bbb;

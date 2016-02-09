@@ -205,6 +205,8 @@ var Zorpodnix = (function () {
     }
 
     offsets.touch = calculateOffset(document.body, canvases.action);
+    document.getElementById('debug').style.width = sizes.frame.width + 'px';
+    document.getElementById('debug').style.height = sizes.frame.height + 'px';
   }
 
   function calculateOffset(root, child) {
@@ -329,6 +331,7 @@ var Zorpodnix = (function () {
     }
     normalSpan = size / totalWeight;
     highlightSpan = highlightWeight * normalSpan;
+    sizes.spellShapeSpan = spanFill * highlightSpan;
     shapeX = Math.max(highlightSpan / 2,
         (size - spanFill * highlightSpan) / 2);
     fontSize = layout.spell.fontFactor * size;
@@ -432,15 +435,36 @@ var Zorpodnix = (function () {
     status.inLevel = false;
   }
 
-  function configureHammer() {
-    var actionHammer = new Hammer(canvases.touch);
-    function handleTouch(event) {
-      var canvasPosition = event.center,
-          offset = offsets.touch,
-          x = canvasPosition.x - event.deltaX - offset.x,
-          y = canvasPosition.y - event.deltaY - offset.y;
-      console.log(event.type, x, y);
+  function debugMessage() {
+    var parts = new Array(arguments.length),
+        i;
+    for (i = 0; i < arguments.length; ++i) {
+      parts[i] = arguments[i];
     }
+    document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
+  }
+
+  function handleTouch(event) {
+    var pagePosition = event.center,
+        offset = offsets.touch,
+        x = pagePosition.x - event.deltaX - offset.x,
+        y = pagePosition.y - event.deltaY - offset.y,
+        context = contexts.touch,
+        canvas = canvases.touch,
+        width = canvas.width, height = canvas.height;
+    if (x < 0 || x > width || y < 0 || y > height) {
+      return;
+    }
+    //console.log(event.type, x, y);
+    context.clearRect(0, 0, width, height);
+    context.beginPath();
+    context.arc(x, y, sizes.spellShapeSpan / 4, 0, 2 * Math.PI);
+    context.closePath();
+    context.fill();
+  }
+
+  function configureHammer() {
+    var actionHammer = new Hammer(document.body);
     actionHammer.get('swipe').set({ direction: Hammer.DIRECTION_ALL });
     actionHammer.on('tap press swipe', handleTouch);
   }
