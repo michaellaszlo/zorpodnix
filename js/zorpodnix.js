@@ -48,6 +48,9 @@ var Zorpodnix = (function () {
           passiveGray: 0.6,
           activeGray: 0.1,
           fontFamily: "'Bitter', sans-serif"
+        },
+        action: {
+          touchSpanFactor: 0.5
         }
       },
       sizes = {
@@ -332,6 +335,7 @@ var Zorpodnix = (function () {
     normalSpan = size / totalWeight;
     highlightSpan = highlightWeight * normalSpan;
     sizes.spellShapeSpan = spanFill * highlightSpan;
+    sizes.touchSpan = layout.action.touchSpanFactor * sizes.spellShapeSpan;
     shapeX = Math.max(highlightSpan / 2,
         (size - spanFill * highlightSpan) / 2);
     fontSize = layout.spell.fontFactor * size;
@@ -444,34 +448,49 @@ var Zorpodnix = (function () {
     document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
   }
 
-  function handleTap(x, y) {
+  function handleTouch(x, y) {
     var offset = offsets.touch,
         context = contexts.touch,
         canvas = canvases.touch,
-        width = canvas.width, height = canvas.height;
+        width = canvas.width, height = canvas.height,
+        targetPosition, tx, ty;
+    if (!status.inStage) {
+      return;
+    }
+
+    // Ignore touches outside the action area.
     x -= offset.x;
     y -= offset.y;
     if (x < 0 || x > width || y < 0 || y > height) {
       return;
     }
+
+    // Display the touch span area.
     context.clearRect(0, 0, width, height);
     context.beginPath();
-    context.arc(x, y, sizes.spellShapeSpan / 4, 0, 2 * Math.PI);
+    context.arc(x, y, sizes.touchSpan / 2, 0, 2 * Math.PI);
     context.closePath();
     context.fill();
+
+    // Check whether the target shape is within touch span.
+    targetPosition = stage.actionPositions[stage.syllablePosition];
+    tx = targetPosition.x * width;
+    ty = targetPosition.y * height;
+    console.log(x, y, tx, ty);
   }
 
-  function configureTap() {
+  function configureTouch() {
     document.body.ontouchstart = function (event) {
       var touch;
       if (event.targetTouches.length > 1) {
         return;
       }
       touch = event.targetTouches[0];
-      handleTap(touch.pageX, touch.pageY);
+      handleTouch(touch.pageX, touch.pageY);
+      event.stopPropagation();
     };
     document.body.onmousedown = function (event) {
-      handleTap(event.pageX, event.pageY);
+      handleTouch(event.pageX, event.pageY);
     };
   }
 
@@ -483,7 +502,7 @@ var Zorpodnix = (function () {
   function load() {
     makeShapes();
     makeLayout();
-    configureTap();
+    configureTouch();
     window.onresize = resize;
     setTimeout(resize, 200);
     startLevel(0);
