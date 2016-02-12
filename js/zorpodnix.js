@@ -273,7 +273,7 @@ var Zorpodnix = (function () {
     size = sizes.action.width;
     scale = size / stage.numCols / 2;
     stage.actionShapes.forEach(function (shape, index) {
-      var position = stage.actionPositions[index],
+      var position = stage.actionShapes[index].actionPosition,
           x = position.x,
           y = position.y;
       context.save();
@@ -407,9 +407,12 @@ var Zorpodnix = (function () {
     shuffle(stage.actionShapes);
     numCols = Math.ceil(Math.sqrt(stage.actionShapes.length));
     stage.numCols = numCols;
-    stage.actionPositions = stage.actionShapes.map(function (shape, index) {
+    stage.actionShapes.forEach(function (shape, index) {
       var c = index % numCols, r  = (index - c) / numCols;
-      return { x: (c + 0.5) / numCols, y: (r + 0.5) / numCols };
+      shape.actionPosition = {
+        x: (c + 0.5) / numCols,
+        y: (r + 0.5) / numCols
+      };
     });
 
     stage.syllablePosition = 0;
@@ -473,6 +476,8 @@ var Zorpodnix = (function () {
     context.fill();
 
     // Check whether the target shape is within touch span.
+    console.log(stage.syllablePosition);
+    console.log(stage.syllablePosition);
     targetPosition = stage.actionPositions[stage.syllablePosition];
     tx = targetPosition.x * width;
     ty = targetPosition.y * height;
