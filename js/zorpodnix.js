@@ -258,7 +258,6 @@ var Zorpodnix = (function () {
   function paintFrame() {
     var context,
         size,
-        scale,
         weights = {};
     if (!status.inStage) {
       return;
@@ -271,14 +270,14 @@ var Zorpodnix = (function () {
     // Action.
     context = contexts.action;
     size = sizes.action.width;
-    scale = size / stage.numCols / 2;
+    sizes.actionUnit = 0.95 * size / stage.numCols / 2;
     stage.actionShapes.forEach(function (shape, index) {
       var position = stage.actionShapes[index].actionPosition,
           x = position.x,
           y = position.y;
       context.save();
       context.translate(x * size, y * size);
-      context.scale(0.95 * scale, 0.95 * scale);
+      context.scale(sizes.actionUnit, sizes.actionUnit);
       shape.paint(context);
       context.restore();
     });
@@ -456,7 +455,8 @@ var Zorpodnix = (function () {
         context = contexts.touch,
         canvas = canvases.touch,
         width = canvas.width, height = canvas.height,
-        targetPosition, tx, ty;
+        targetShape,
+        tx, ty, dd;
     if (!status.inStage) {
       return;
     }
@@ -473,15 +473,27 @@ var Zorpodnix = (function () {
     context.beginPath();
     context.arc(x, y, sizes.touchSpan / 2, 0, 2 * Math.PI);
     context.closePath();
+    context.fillStyle = '#000';
     context.fill();
 
     // Check whether the target shape is within touch span.
-    console.log(stage.syllablePosition);
-    console.log(stage.syllablePosition);
-    targetPosition = stage.actionPositions[stage.syllablePosition];
-    tx = targetPosition.x * width;
-    ty = targetPosition.y * height;
-    console.log(x, y, tx, ty);
+    targetShape = stage.spellShapes[stage.syllablePosition];
+    tx = targetShape.actionPosition.x * width;
+    ty = targetShape.actionPosition.y * height;
+    dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
+    if (dd <= Math.pow(sizes.actionUnit + sizes.touchSpan / 2, 2)) {
+      context.beginPath();
+      context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
+      context.closePath();
+      context.fill();
+    } else {
+      context.beginPath();
+      context.arc(tx, ty, sizes.actionUnit - 2, 0, 2 * Math.PI);
+      context.closePath();
+      context.lineWidth = 4;
+      context.strokeStyle = '#b00';
+      context.stroke();
+    }
   }
 
   function configureTouch() {
