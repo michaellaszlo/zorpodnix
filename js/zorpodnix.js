@@ -3,6 +3,7 @@ var Zorpodnix = (function () {
 
   var levelSpecs = [
         {
+          name: 'novice',
           numPairs: 4,
           stages: [
             { show: [ 0, 1, 2 ] },
@@ -35,6 +36,9 @@ var Zorpodnix = (function () {
         },
         portrait: {
           action: 'bottom'
+        },
+        info: {
+          fontFactor: 0.15,
         },
         spell: {
           spanFill: 0.9,
@@ -212,6 +216,9 @@ var Zorpodnix = (function () {
       }
     }
 
+    containers.info.style.fontSize =
+        layout.info.fontFactor * sizes.info.height + 'px';
+
     offsets.touch = calculateOffset(document.body, canvases.action);
     document.getElementById('debug').style.width = sizes.frame.width + 'px';
     document.getElementById('debug').style.height = sizes.frame.height + 'px';
@@ -267,6 +274,13 @@ var Zorpodnix = (function () {
     if (!('spell' in sizes)) {
       return;
     }
+
+    // Info.
+    containers.info.innerHTML = [
+      level.name,
+      'stage ' + (current.stageIndex + 1) + ' / ' + level.stages.length,
+      'trial ' + (current.trialIndex + 1) + ' / ' + current.numTrials,
+    ].join('<br>');
 
     // Spell.
     weights[current.spellIndex] = 1;
@@ -466,8 +480,9 @@ var Zorpodnix = (function () {
     var levelSpec,
         i;
     levelSpec = levelSpecs[levelIndex];
-    level.numPairs = levelSpec.numPairs;
-    level.stages = levelSpec.stages;
+    [ 'name', 'numPairs', 'stages' ].forEach(function (property) {
+      level[property] = levelSpec[property];
+    });
     shuffle(shapes);
     shuffle(syllables);
     level.shapes = shapes.slice(0, level.numPairs);
