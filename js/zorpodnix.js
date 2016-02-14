@@ -256,13 +256,14 @@ var Zorpodnix = (function () {
     var context,
         size,
         weights = {};
-    if (!status.inStage) {
+    if (!('spell' in sizes)) {
       return;
     }
 
     // Spell.
     weights[current.spellIndex] = 1;
-    paintSpell(current.spellShapes, current.spellSyllables, weights);
+    paintSpell(current.spellShapes, current.spellSyllables, weights,
+        current.hideSyllables);
 
     // Erase action.
     context = contexts.action;
@@ -294,7 +295,7 @@ var Zorpodnix = (function () {
     }
   }
 
-  function paintSpell(shapes, syllables, highlightWeights) {
+  function paintSpell(shapes, syllables, highlightWeights, hideSyllables) {
     var spellLength = shapes.length,
         context = contexts.spell,
         size = sizes.spell.height,
@@ -350,6 +351,9 @@ var Zorpodnix = (function () {
       context.scale(spanFill * span / 2, spanFill * span / 2);
       shapes[i].paint(context);
       context.restore();
+      if (hideSyllables && i >= current.spellIndex) {
+        continue;
+      }
       textWidth = context.measureText(syllables[i]).width;
       context.fillStyle = textColors[i];
       context.fillText(syllables[i],
@@ -429,6 +433,7 @@ var Zorpodnix = (function () {
 
   function startTrial() {
     current.spellIndex = 0;
+    current.hideSyllables = (current.trialIndex == current.numTrials - 1);
     paintFrame();
     console.log('started trial ' + current.trialIndex);
   }
@@ -445,6 +450,7 @@ var Zorpodnix = (function () {
 
   function finishStage(success) {
     console.log('finished trial ' + current.stageIndex);
+    paintFrame();
     status.inStage = false;
   }
 
