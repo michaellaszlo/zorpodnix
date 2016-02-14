@@ -16,11 +16,9 @@ var Zorpodnix = (function () {
           ]
         }
       ],
-      countdown = {
-        total: 20
-      },
+      levelIndex,
       level = {},
-      stage = {},
+      current = {},
       shapePalettes = [
         [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
       ],
@@ -31,7 +29,6 @@ var Zorpodnix = (function () {
       shapeNames = [],
       shapes = [],
       syllables,
-      spellLength,
       layout = {
         landscape: {
           action: 'right'
@@ -264,15 +261,18 @@ var Zorpodnix = (function () {
     }
 
     // Spell.
-    weights[stage.syllablePosition] = 1;
-    paintSpell(stage.spellShapes, stage.spellSyllables, weights);
+    weights[current.spellIndex] = 1;
+    paintSpell(current.spellShapes, current.spellSyllables, weights);
 
-    // Action.
+    // Erase action.
     context = contexts.action;
     size = sizes.action.width;
-    sizes.actionUnit = 0.95 * size / stage.numCols / 2;
-    stage.actionShapes.forEach(function (shape, index) {
-      var position = stage.actionShapes[index].actionPosition,
+    context.clearRect(0, 0, size, size);
+
+    // Paint action.
+    sizes.actionUnit = 0.95 * size / current.numCols / 2;
+    current.actionShapes.forEach(function (shape, index) {
+      var position = current.actionShapes[index].actionPosition,
           x = position.x,
           y = position.y;
       context.save();
@@ -294,13 +294,13 @@ var Zorpodnix = (function () {
     }
   }
 
-  function paintSpell(shapes, syllables, highlighted) {
-    var numPairs = shapes.length,
+  function paintSpell(shapes, syllables, highlightWeights) {
+    var spellLength = shapes.length,
         context = contexts.spell,
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
         highlightWeight = layout.spell.highlightWeight,
-        weights = new Array(numPairs),
+        weights = new Array(spellLength),
         weight,
         shapeX,
         syllableX,
@@ -315,16 +315,16 @@ var Zorpodnix = (function () {
         gray,
         normalTextColor =
             'rgb(' + [ passiveGray, passiveGray, passiveGray ].join(', ') + ')',
-        textColors = new Array(numPairs),
+        textColors = new Array(spellLength),
         i, x, y;
-    for (i = 0; i < numPairs; ++i) {
+    for (i = 0; i < spellLength; ++i) {
       weights[i] = 1;
       textColors[i] = normalTextColor;
     }
-    totalWeight = numPairs;
-    if (highlighted) {
-      Object.keys(highlighted).forEach(function (index) {
-        weight = highlighted[index] * highlightWeight;
+    totalWeight = spellLength;
+    if (highlightWeights) {
+      Object.keys(highlightWeights).forEach(function (index) {
+        weight = highlightWeights[index] * highlightWeight;
         weights[index] = weight;
         totalWeight += weight - 1;
         gray = Math.floor(passiveGray - weight * (passiveGray - activeGray));
@@ -342,7 +342,7 @@ var Zorpodnix = (function () {
     contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
     context.clearRect(0, 0, size, size);
     y = 0;
-    for (i = 0; i < numPairs; ++i) {
+    for (i = 0; i < spellLength; ++i) {
       span = normalSpan * weights[i];
       y += span;
       context.save();
@@ -359,54 +359,61 @@ var Zorpodnix = (function () {
   }
 
   function startStage(stageIndex) {
-    var spellSize,
+    var stage,
+        spellLength,
         spellIndices = [],
         shown = {},
         i, j,
         numCols;
 
     // Read the indices of the syllables that compose the spell.
-    stage = level.stages[stageIndex];
+    current.stage = stage = level.stages[stageIndex];
     if (stage.show) {
       stage.show.forEach(function (index) {
         spellIndices.push(index);
         shown[index] = true;
       });
+      // Shown syllables are only hidden in the last trial.
+      current.numTrials = 3;
+    } else {
+      // If no syllables are shown, only have one trial.
+      current.numTrials = 1;
     }
+
     if (stage.test) {
       stage.test.forEach(function (index) {
         spellIndices.push(index);
       });
     }
-    spellSize = spellIndices.length;
+    current.spellLength = spellLength = spellIndices.length;
     shuffle(spellIndices);
 
     // Get the corresponding shapes.
-    stage.spellShapes = new Array(spellSize);
-    stage.spellSyllables = new Array(spellSize);
-    for (i = 0; i < spellSize; ++i) {
-      stage.spellShapes[i] = level.shapes[spellIndices[i]];
-      stage.spellSyllables[i] = level.syllables[spellIndices[i]];
+    current.spellShapes = new Array(spellLength);
+    current.spellSyllables = new Array(spellLength);
+    for (i = 0; i < spellLength; ++i) {
+      current.spellShapes[i] = level.shapes[spellIndices[i]];
+      current.spellSyllables[i] = level.syllables[spellIndices[i]];
     }
 
     // Select decoy shapes to be used in the action area.
     // Take some decoys among the level shapes.
-    stage.decoyShapes = new Array(3 * spellSize);
-    for (i = 0; i < spellSize && spellSize + i < level.numPairs; ++i) {
-      stage.decoyShapes[i] = level.shapes[spellSize + i];
+    current.decoyShapes = new Array(3 * spellLength);
+    for (i = 0; i < spellLength && spellLength + i < level.numPairs; ++i) {
+      current.decoyShapes[i] = level.shapes[spellLength + i];
     }
     // Take the rest outside the level shapes.
     j = 0;
-    while (i < stage.decoyShapes.length) {
-      stage.decoyShapes[i++] = level.shapesOutsideLevel[j++];
+    while (i < current.decoyShapes.length) {
+      current.decoyShapes[i++] = level.shapesOutsideLevel[j++];
     }
 
     // Action shapes: a shuffled array of spell shapes and decoy shapes.
-    stage.actionShapes = stage.spellShapes.concat(stage.decoyShapes);
-    shuffle(stage.actionShapes);
-    numCols = Math.ceil(Math.sqrt(stage.actionShapes.length));
-    stage.numCols = numCols;
-    stage.actionShapes.forEach(function (shape, index) {
+    current.actionShapes = current.spellShapes.concat(current.decoyShapes);
+    shuffle(current.actionShapes);
+    numCols = Math.ceil(Math.sqrt(current.actionShapes.length));
+    current.numCols = numCols;
+    current.actionShapes.forEach(function (shape, index) {
       var c = index % numCols, r  = (index - c) / numCols;
       shape.actionPosition = {
         x: (c + 0.5) / numCols,
@@ -414,11 +421,30 @@ var Zorpodnix = (function () {
       };
     });
 
-    stage.syllablePosition = 0;
+    console.log('started stage ' + current.stageIndex);
+    current.trialIndex = 0;
+    startTrial();
     status.inStage = true;
   }
 
+  function startTrial() {
+    current.spellIndex = 0;
+    paintFrame();
+    console.log('started trial ' + current.trialIndex);
+  }
+
+  function finishTrial() {
+    console.log('finished trial ' + current.trialIndex);
+    current.trialIndex += 1;
+    if (current.trialIndex == current.numTrials) {
+      finishStage();
+    } else {
+      startTrial();
+    }
+  }
+
   function finishStage(success) {
+    console.log('finished trial ' + current.stageIndex);
     status.inStage = false;
   }
 
@@ -434,7 +460,8 @@ var Zorpodnix = (function () {
     level.syllables = syllables.slice(0, level.numPairs);
     level.shapesOutsideLevel = shapes.slice(level.numPairs);
     status.inLevel = true;
-    startStage(0);
+    current.stageIndex = 0;
+    startStage(current.stageIndex);
   }
   
   function finishLevel(success) {
@@ -448,6 +475,20 @@ var Zorpodnix = (function () {
       parts[i] = arguments[i];
     }
     document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
+  }
+
+  function hitShape() {
+    console.log('right on');
+    current.spellIndex += 1;
+    if (current.spellIndex == current.spellLength) {
+      finishTrial();
+    } else {
+      paintFrame();
+    }
+  }
+
+  function missShape() {
+    console.log('boo');
   }
 
   function handleTouch(x, y) {
@@ -477,16 +518,20 @@ var Zorpodnix = (function () {
     context.fill();
 
     // Check whether the target shape is within touch span.
-    targetShape = stage.spellShapes[stage.syllablePosition];
+    targetShape = current.spellShapes[current.spellIndex];
     tx = targetShape.actionPosition.x * width;
     ty = targetShape.actionPosition.y * height;
     dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
     if (dd <= Math.pow(sizes.actionUnit + sizes.touchSpan / 2, 2)) {
+      hitShape();
+      // Graphical effects to illustrate a hit.
       context.beginPath();
       context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
       context.closePath();
       context.fill();
     } else {
+      missShape();
+      // Graphical effects to illustrate a miss.
       context.beginPath();
       context.arc(tx, ty, sizes.actionUnit - 2, 0, 2 * Math.PI);
       context.closePath();
@@ -522,7 +567,8 @@ var Zorpodnix = (function () {
     configureTouch();
     window.onresize = resize;
     setTimeout(resize, 200);
-    startLevel(0);
+    levelIndex = 0;
+    startLevel(levelIndex);
   }
 
   return {
