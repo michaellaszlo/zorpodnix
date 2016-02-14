@@ -478,7 +478,7 @@ var Zorpodnix = (function () {
   }
 
   function hitShape() {
-    console.log('right on');
+    console.log('hit');
     current.spellIndex += 1;
     if (current.spellIndex == current.spellLength) {
       finishTrial();
@@ -488,7 +488,8 @@ var Zorpodnix = (function () {
   }
 
   function missShape() {
-    console.log('boo');
+    console.log('miss');
+    startTrial();
   }
 
   function handleTouch(x, y) {
