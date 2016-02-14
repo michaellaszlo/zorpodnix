@@ -15,23 +15,24 @@ body, div, canvas {
   color: #333;
 }
 
-#touchCanvas {
-  opacity: 0.5;
-}
-/*
 #windowCanvas {
-  background: #bbb;
+  background: #888;
 }
 #frameContainer {
   background: #f4f4f4;
 }
-#actionContainer {
-  background: #444;
-}
-#countdownContainer {
-  background: #f4f4f4;
+#infoContainer {
+  background: #bbb;
 }
 #spellContainer {
   background: #fff;
 }
-*/
+#countdownContainer {
+  background: #ddd;
+}
+#actionContainer {
+  background: #444;
+}
+#touchCanvas {
+  opacity: 0.5;
+}

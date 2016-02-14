@@ -50,8 +50,7 @@ var Zorpodnix = (function () {
           touchSpanFactor: 0.5
         }
       },
-      sizes = {
-      },
+      sizes = {},
       margin = {},
       containers = {},
       offsets = {},
@@ -90,7 +89,7 @@ var Zorpodnix = (function () {
   }
 
   function updateLayout() {
-    var actionSize, spellSize, gap, infoSize;
+    var actionSize, spellSize, gap, infoSize, panelSize;
 
     sizes.window = {
       width: window.innerWidth,
@@ -124,10 +123,7 @@ var Zorpodnix = (function () {
       actionSize = sizes.frame.height;
       spellSize = Math.floor(actionSize * 2 / 3);
       gap = sizes.frame.width - actionSize - spellSize;
-      infoSize = actionSize - spellSize;
-      sizes.action = { width: actionSize, height: actionSize };
       sizes.countdown = { width: gap, height: actionSize };
-      sizes.spell = { width: spellSize, height: spellSize };
     } else {
       layout.orientation = 'portrait';
       if (sizes.window.height * 9 / 16 < sizes.window.width) {
@@ -151,15 +147,17 @@ var Zorpodnix = (function () {
       actionSize = sizes.frame.width;
       spellSize = Math.floor(actionSize * 2 / 3);
       gap = sizes.frame.height - actionSize - spellSize;
-      infoSize = actionSize - spellSize;
-      sizes.action = { width: actionSize, height: actionSize };
       sizes.countdown = { width: actionSize, height: gap };
-      sizes.spell = { width: spellSize, height: spellSize };
     }
+    sizes.action = { width: actionSize, height: actionSize };
     sizes.touch = sizes.action;
+    sizes.spell = { width: spellSize, height: spellSize };
+    infoSize = actionSize - spellSize;
+    sizes.info = { width: infoSize, height: infoSize };
+    sizes.menu = sizes.info;
 
     // Containers for the frame and its three sections.
-    [ 'frame', 'action', 'touch', 'countdown', 'spell'
+    [ 'frame', 'info', 'spell', 'countdown', 'action', 'touch'
     ].forEach(function (name) {
       if (name in containers) {
         containers[name].style.width = sizes[name].width + 'px';
@@ -174,13 +172,18 @@ var Zorpodnix = (function () {
       containers.frame.style.left = margin.frame.left + 'px';
       containers.frame.style.top = margin.frame.top + 'px';
       containers.countdown.style.top = containers.action.style.top = '0';
+      containers.info.style.top = '0';
       containers.spell.style.top = infoSize + 'px';
       if (layout.landscape.action == 'left') {
+        // Action on the left, info-menu-spell panel on the right.
         containers.action.style.left = '0';
         containers.countdown.style.left = sizes.action.width + 'px';
-        containers.spell.style.left = (sizes.action.width +
-            sizes.countdown.width) + 'px';
+        panelSize = sizes.action.width + sizes.countdown.width;
+        containers.info.style.left = panelSize + 'px';
+        containers.spell.style.left = panelSize + 'px';
       } else {
+        // Menu-info-spell panel on the left, action on the right.
+        containers.info.style.left = sizes.menu.width + 'px';
         containers.spell.style.left = '0';
         containers.countdown.style.left = sizes.spell.width + 'px';
         containers.action.style.left = (sizes.spell.width +
@@ -190,14 +193,19 @@ var Zorpodnix = (function () {
       containers.frame.style.left = margin.frame.left + 'px';
       containers.frame.style.top = margin.frame.top + 'px';
       containers.countdown.style.left = containers.action.style.left = '0';
+      containers.info.style.left = '0';
       containers.spell.style.left = infoSize + 'px';
       if (layout.portrait.action == 'top') {
+        // Action on top, info-menu-spell panel on bottom.
         containers.action.style.top = '0';
+        panelSize = sizes.action.height + sizes.countdown.height;
         containers.countdown.style.top = sizes.action.height + 'px';
-        containers.spell.style.top = (sizes.action.height +
-            sizes.countdown.height) + 'px';
+        containers.info.style.top = panelSize + 'px';
+        containers.spell.style.top = panelSize + 'px';
       } else {
+        // Menu-info-spell panel on top, action on bottom.
         containers.spell.style.top = '0';
+        containers.info.style.top = sizes.menu.height + 'px';
         containers.countdown.style.top = sizes.spell.height + 'px';
         containers.action.style.top = (sizes.spell.height +
             sizes.countdown.height) + 'px';
@@ -230,7 +238,7 @@ var Zorpodnix = (function () {
     containers.frame = document.createElement('div');
     containers.frame.id = 'frameContainer';
     document.body.appendChild(containers.frame);
-    [ 'spell', 'countdown', 'action' ].forEach(function (name) {
+    [ 'info', 'spell', 'countdown', 'action' ].forEach(function (name) {
       var container = containers[name] = document.createElement('div'),
           canvas = canvases[name] = document.createElement('canvas');
       container.appendChild(canvas);
