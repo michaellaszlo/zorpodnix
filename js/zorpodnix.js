@@ -400,7 +400,9 @@ var Zorpodnix = (function () {
         spellLength,
         spellShapes = [],
         decoyShapes,
-        i, j,
+        candidate,
+        found,
+        i, j, k,
         numCols;
 
     // Read the indices of the syllables that compose the spell.
@@ -430,13 +432,26 @@ var Zorpodnix = (function () {
     // Select decoy shapes to be used in the action area.
     // Take some decoys among the level shapes.
     decoyShapes = new Array(3 * spellLength);
+    k = 0;
     for (i = 0; i < spellLength && spellLength + i < level.numPairs; ++i) {
-      decoyShapes[i] = level.shapes[spellLength + i];
+      candidate = level.shapes[spellLength + i];
+      found = false;
+      for (j = 0; j < spellLength; ++j) {
+        if (spellShapes[j] == candidate) {
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        console.log('skipping duplicate ' + JSON.stringify(candidate));
+        continue;
+      }
+      decoyShapes[k++] = candidate;
     }
     // Take the rest outside the level shapes.
-    j = 0;
-    while (i < decoyShapes.length) {
-      decoyShapes[i++] = level.shapesOutsideLevel[j++];
+    i = 0;
+    while (k < decoyShapes.length) {
+      decoyShapes[k++] = level.shapesOutsideLevel[i++];
     }
 
     // Action shapes: a shuffled array of spell shapes and decoy shapes.
@@ -450,6 +465,7 @@ var Zorpodnix = (function () {
         x: (c + 0.5) / numCols,
         y: (r + 0.5) / numCols
       };
+      console.log(JSON.stringify(shape));
     });
 
     console.log('started stage ' + current.stageIndex);
@@ -500,6 +516,9 @@ var Zorpodnix = (function () {
     });
     level.shapes = shapes.slice(0, level.numPairs);
     level.shapesOutsideLevel = shapes.slice(level.numPairs);
+    console.log(shapes.length + ' shapes in all');
+    console.log(level.shapes.length + ' shapes chosen for level');
+    console.log(level.shapesOutsideLevel.length + ' shapes outside level');
     status.inLevel = true;
     current.stageIndex = 0;
     startStage();
