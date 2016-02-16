@@ -560,6 +560,7 @@ var Zorpodnix = (function () {
         width = canvas.width, height = canvas.height,
         targetShape,
         tx, ty, dd;
+    console.log('handleTouch(' + x + ', ' + y + ')');
     if (!status.inStage) {
       return;
     }
@@ -608,15 +609,18 @@ var Zorpodnix = (function () {
 
   function configureTouch() {
     document.body.ontouchstart = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.log('touchstart');
       var touch;
       if (event.targetTouches.length > 1) {
         return;
       }
       touch = event.targetTouches[0];
       handleTouch(touch.pageX, touch.pageY);
-      event.stopPropagation();
     };
     document.body.onmousedown = function (event) {
+      console.log('mousedown');
       handleTouch(event.pageX, event.pageY);
     };
   }
