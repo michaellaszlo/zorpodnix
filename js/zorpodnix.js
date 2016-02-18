@@ -43,7 +43,7 @@ var Zorpodnix = (function () {
         },
         spell: {
           spanFill: 0.9,
-          highlightWeight: 1.5,
+          highlightWeightIncrement: 0.5,
           syllableFactorY: 0.36,
           syllableFactorX: -0.075,
           fontFactor: 0.19,
@@ -270,8 +270,7 @@ var Zorpodnix = (function () {
 
   function paintFrame() {
     var context,
-        size,
-        weights = {};
+        size;
     if (!('spell' in sizes)) {
       return;
     }
@@ -284,8 +283,7 @@ var Zorpodnix = (function () {
     ].join('<br>');
 
     // Spell.
-    weights[current.spellIndex] = 1;
-    paintSpell(weights);
+    paintSpell(current.weights);
 
     // Erase action.
     context = contexts.action;
@@ -325,7 +323,7 @@ var Zorpodnix = (function () {
         context = contexts.spell,
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
-        highlightWeight = layout.spell.highlightWeight,
+        highlightWeightIncrement = layout.spell.highlightWeightIncrement,
         weights = new Array(spellLength),
         weight,
         shape,
@@ -349,7 +347,7 @@ var Zorpodnix = (function () {
     totalWeight = spellLength;
     if (highlightWeights) {
       Object.keys(highlightWeights).forEach(function (index) {
-        weight = highlightWeights[index] * highlightWeight;
+        weight = 1 + highlightWeights[index] * highlightWeightIncrement;
         weights[index] = weight;
         totalWeight += weight - 1;
         gray = Math.floor(passiveGray - weight * (passiveGray - activeGray));
@@ -357,7 +355,7 @@ var Zorpodnix = (function () {
       });
     }
     normalSpan = size / totalWeight;
-    highlightSpan = highlightWeight * normalSpan;
+    highlightSpan = (1 + highlightWeightIncrement) * normalSpan;
     sizes.spellShapeSpan = spanFill * highlightSpan;
     sizes.touchSpan = layout.action.touchSpanFactor * sizes.spellShapeSpan;
     shapeX = Math.max(highlightSpan / 2,
@@ -470,8 +468,25 @@ var Zorpodnix = (function () {
 
     console.log('started stage ' + current.stageIndex);
     current.trialIndex = 0;
+    current.weights = {};
+    magnifySpellShape(current.trialIndex);
     startTrial();
     status.inStage = true;
+  }
+
+  function magnifySpellShape(index) {
+    var weight = 0,
+        interval;
+    current.weights[index] = 0;
+    interval = setInterval(function () {
+      weight += 1 / 90;
+      if (weight >= 1) {
+        weight = 1;
+        clearInterval(interval);
+      }
+      current.weights[index] = weight;
+      paintSpell(current.weights);
+    }, 1000 / 60);
   }
 
   function startTrial() {
