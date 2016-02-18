@@ -31,6 +31,11 @@ var Zorpodnix = (function () {
       shapeNames = [],
       shapes = [],
       syllables,
+      animation = {
+        trialStart: {
+          duration: 0.4
+        }
+      },
       layout = {
         landscape: {
           action: 'right'
@@ -43,16 +48,14 @@ var Zorpodnix = (function () {
         },
         spell: {
           spanFill: 0.9,
-          highlightWeightIncrement: 0.5,
+          maxWeight: 1.5,
+          shapeFactorX: 0.3,
           syllableFactorY: 0.36,
           syllableFactorX: -0.075,
           fontFactor: 0.19,
           passiveGray: 0.6,
           activeGray: 0.1,
           fontFamily: "'Bitter', sans-serif"
-        },
-        action: {
-          touchSpanFactor: 0.5
         }
       },
       sizes = {},
@@ -217,6 +220,8 @@ var Zorpodnix = (function () {
       }
     }
 
+    sizes.touchSpan = sizes.action.height / 10;
+
     containers.info.style.fontSize =
         layout.info.fontFactor * sizes.info.height + 'px';
 
@@ -283,7 +288,7 @@ var Zorpodnix = (function () {
     ].join('<br>');
 
     // Spell.
-    paintSpell(current.weights);
+    paintSpell();
 
     // Erase action.
     context = contexts.action;
@@ -315,7 +320,7 @@ var Zorpodnix = (function () {
     }
   }
 
-  function paintSpell(highlightWeights) {
+  function paintSpell() {
     var shapes = current.spellShapes,
         spellLength = shapes.length,
         isFinalTrial = (current.trialIndex >= current.numTrials - 1),
@@ -323,52 +328,43 @@ var Zorpodnix = (function () {
         context = contexts.spell,
         size = sizes.spell.height,
         spanFill = layout.spell.spanFill,
-        highlightWeightIncrement = layout.spell.highlightWeightIncrement,
-        weights = new Array(spellLength),
+        weights = current.spellWeights,
+        maxWeight = layout.spell.maxWeight,
+        heaviest = 1,
         weight,
+        weightSum,
+        totalWeight,
         shape,
         shapeX, syllableX,
-        totalWeight,
-        normalSpan, highlightSpan,
+        unitSpan, maxSpan,
         span,
         fontSize,
         textWidth,
         passiveGray = Math.floor(layout.spell.passiveGray * 256),
         activeGray = Math.floor(layout.spell.activeGray * 256),
         gray,
-        normalTextColor =
-            'rgb(' + [ passiveGray, passiveGray, passiveGray ].join(', ') + ')',
         textColors = new Array(spellLength),
-        i, x, y;
+        i, bottom, y;
+    totalWeight = 0;
     for (i = 0; i < spellLength; ++i) {
-      weights[i] = 1;
-      textColors[i] = normalTextColor;
+      weight = weights[i];
+      totalWeight += weight;
+      gray = Math.floor(passiveGray + (activeGray - passiveGray) *
+          (weight - 1) / (maxWeight - 1));
+      textColors[i] = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
     }
-    totalWeight = spellLength;
-    if (highlightWeights) {
-      Object.keys(highlightWeights).forEach(function (index) {
-        weight = 1 + highlightWeights[index] * highlightWeightIncrement;
-        weights[index] = weight;
-        totalWeight += weight - 1;
-        gray = Math.floor(passiveGray - weight * (passiveGray - activeGray));
-        textColors[index] = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
-      });
-    }
-    normalSpan = size / totalWeight;
-    highlightSpan = (1 + highlightWeightIncrement) * normalSpan;
-    sizes.spellShapeSpan = spanFill * highlightSpan;
-    sizes.touchSpan = layout.action.touchSpanFactor * sizes.spellShapeSpan;
-    shapeX = Math.max(highlightSpan / 2,
-        (size - spanFill * highlightSpan) / 2);
+    unitSpan = size / totalWeight;
+    shapeX = layout.spell.shapeFactorX * size;
     fontSize = layout.spell.fontFactor * size;
     syllableX = (size / 2) * (1 + layout.spell.syllableFactorX);
     contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
     context.clearRect(0, 0, size, size);
-    y = 0;
+    bottom = 0;
     for (i = 0; i < spellLength; ++i) {
       shape = current.spellShapes[i];
-      span = normalSpan * weights[i];
-      y += span;
+      span = unitSpan * weights[i];
+      bottom += span;
+      y = bottom - span / 2;
       // If this is the final trial, show the shape iff we've already matched
       // the syllable. For all other trials, show the shape iff it is not
       // being tested.
@@ -379,8 +375,9 @@ var Zorpodnix = (function () {
       }
       if (showShape) {
         context.save();
-        context.translate(shapeX, y - span / 2);
+        context.translate(shapeX, y);
         context.scale(spanFill * span / 2, spanFill * span / 2);
+        context.fillStyle = '#ddd';
         shape.paint(context);
         context.restore();
       }
@@ -388,7 +385,7 @@ var Zorpodnix = (function () {
       context.fillStyle = textColors[i];
       context.fillText(shape.syllable,
           syllableX + (size - syllableX - textWidth) / 2,
-          y - span / 2 + layout.spell.syllableFactorY * fontSize);
+          y + layout.spell.syllableFactorY * fontSize);
     }
   }
 
@@ -441,7 +438,6 @@ var Zorpodnix = (function () {
         }
       }
       if (found) {
-        console.log('skipping duplicate ' + JSON.stringify(candidate));
         continue;
       }
       decoyShapes[k++] = candidate;
@@ -463,40 +459,50 @@ var Zorpodnix = (function () {
         x: (c + 0.5) / numCols,
         y: (r + 0.5) / numCols
       };
-      console.log(JSON.stringify(shape));
     });
 
-    console.log('started stage ' + current.stageIndex);
     current.trialIndex = 0;
-    current.weights = {};
-    magnifySpellShape(current.trialIndex);
+    current.spellWeights = current.spellShapes.map(function (shape, i) {
+      return 1;
+    });
     startTrial();
     status.inStage = true;
   }
 
-  function magnifySpellShape(index) {
-    var weight = 0,
-        interval;
-    current.weights[index] = 0;
-    interval = setInterval(function () {
-      weight += 1 / 90;
-      if (weight >= 1) {
-        weight = 1;
-        clearInterval(interval);
+  function animateSpellShape(growIndex, shrinkIndex) {
+    var weights = current.spellWeights,
+        maxWeight = layout.spell.maxWeight,
+        duration = animation.trialStart.duration * 1000,
+        startTime = Date.now();
+    console.log('growIndex ' + growIndex + ', shrinkIndex ' + shrinkIndex);
+    function update() {
+      var progress = Math.min(1, (Date.now() - startTime) / duration);
+      weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      if (shrinkIndex !== undefined) {
+        weights[shrinkIndex] = 1 + (maxWeight - 1) * (1 - progress);
       }
-      current.weights[index] = weight;
-      paintSpell(current.weights);
-    }, 1000 / 60);
+      if (sizes.spell) {
+        paintSpell();
+      }
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      }
+    }
+    update();
   }
 
   function startTrial() {
     current.spellIndex = 0;
+    current.weights = {};
+    if (current.trialIndex == 0) {
+      animateSpellShape(0);
+    } else {
+      animateSpellShape(0, current.spellShapes.length - 1);
+    }
     paintFrame();
-    console.log('started trial ' + current.trialIndex);
   }
 
   function finishTrial() {
-    console.log('finished trial ' + current.trialIndex);
     current.trialIndex += 1;
     if (current.trialIndex == current.numTrials) {
       finishStage();
@@ -506,7 +512,6 @@ var Zorpodnix = (function () {
   }
 
   function finishStage() {
-    console.log('finished stage ' + current.stageIndex);
     paintFrame();
     containers.info.innerHTML = 'stage completed';
     current.stageIndex += 1;
@@ -531,9 +536,6 @@ var Zorpodnix = (function () {
     });
     level.shapes = shapes.slice(0, level.numPairs);
     level.shapesOutsideLevel = shapes.slice(level.numPairs);
-    console.log(shapes.length + ' shapes in all');
-    console.log(level.shapes.length + ' shapes chosen for level');
-    console.log(level.shapesOutsideLevel.length + ' shapes outside level');
     status.inLevel = true;
     current.stageIndex = 0;
     startStage();
@@ -554,17 +556,16 @@ var Zorpodnix = (function () {
   }
 
   function hitShape() {
-    console.log('hit');
     current.spellIndex += 1;
     if (current.spellIndex == current.spellShapes.length) {
       finishTrial();
     } else {
+      animateSpellShape(current.spellIndex, current.spellIndex - 1);
       paintFrame();
     }
   }
 
   function missShape() {
-    console.log('miss');
     startTrial();
   }
 
@@ -575,7 +576,6 @@ var Zorpodnix = (function () {
         width = canvas.width, height = canvas.height,
         targetShape,
         tx, ty, dd;
-    console.log('handleTouch(' + x + ', ' + y + ')');
     if (!status.inStage) {
       return;
     }
@@ -626,7 +626,6 @@ var Zorpodnix = (function () {
     document.body.ontouchstart = function (event) {
       event.preventDefault();
       event.stopPropagation();
-      console.log('touchstart');
       var touch;
       if (event.targetTouches.length > 1) {
         return;
@@ -635,7 +634,6 @@ var Zorpodnix = (function () {
       handleTouch(touch.pageX, touch.pageY);
     };
     document.body.onmousedown = function (event) {
-      console.log('mousedown');
       handleTouch(event.pageX, event.pageY);
     };
   }
