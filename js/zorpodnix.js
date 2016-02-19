@@ -31,13 +31,29 @@ var Zorpodnix = (function () {
       shapeNames = [],
       shapes = [],
       syllables,
+      easing = {
+        // Each function maps the domain [0, 1] to the range [0, 1].
+        linear: function (t) {
+          return t;
+        },
+        cubicInOut: function (t) {
+          t /= 0.5;
+          if (t < 1) {
+            return 0.5 * t * t * t;
+          }
+          t -= 2;
+          return 0.5 * (t * t * t + 2);
+        }
+      },
       animation = {
         spell: {
           grow: {
-            duration: 0.4
+            duration: 0.9,
+            easing: easing.cubicInOut
           },
           shrink: {
-            duration: 0.15
+            duration: 0.6,
+            easing: easing.cubicInOut
           }
         }
       },
@@ -479,11 +495,13 @@ var Zorpodnix = (function () {
     var weights = current.spellWeights,
         maxWeight = layout.spell.maxWeight,
         growDuration = animation.spell.grow.duration * 1000,
+        growEasing = animation.spell.grow.easing,
         shrinkDuration = animation.spell.shrink.duration * 1000,
+        shrinkEasing = animation.spell.grow.easing,
         startTime = Date.now();
     function shrink() {
       var progress = Math.min(1, (Date.now() - startTime) / shrinkDuration);
-      weights[shrinkIndex] = 1 + (maxWeight - 1) * (1 - progress);
+      weights[shrinkIndex] = 1 + (maxWeight - 1) * shrinkEasing(1 - progress);
       paintSpell();
       if (progress < 1) {
         requestAnimationFrame(shrink);
@@ -499,7 +517,7 @@ var Zorpodnix = (function () {
     }
     function grow() {
       var progress = Math.min(1, (Date.now() - startTime) / growDuration);
-      weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      weights[growIndex] = 1 + (maxWeight - 1) * growEasing(progress);
       paintSpell();
       if (progress < 1) {
         requestAnimationFrame(grow);
