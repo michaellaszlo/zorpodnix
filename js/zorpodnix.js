@@ -32,8 +32,13 @@ var Zorpodnix = (function () {
       shapes = [],
       syllables,
       animation = {
-        trialStart: {
-          duration: 0.4
+        spell: {
+          grow: {
+            duration: 0.4
+          },
+          shrink: {
+            duration: 0.15
+          }
         }
       },
       layout = {
@@ -473,18 +478,143 @@ var Zorpodnix = (function () {
   function animateSpellShape(growIndex, shrinkIndex) {
     var weights = current.spellWeights,
         maxWeight = layout.spell.maxWeight,
-        duration = animation.trialStart.duration * 1000,
-        startTime = Date.now(),
-        sequel = function () {};
-    console.log('growIndex ' + growIndex + ', shrinkIndex ' + shrinkIndex);
-    if (growIndex === shrinkIndex) {
-      growIndex = null;
-      duration /= 4;
-      sequel = function () {
-        animateSpellShape(shrinkIndex);
-      };
+        growDuration = animation.spell.grow.duration * 1000,
+        shrinkDuration = animation.spell.shrink.duration * 1000,
+        startTime = Date.now();
+    function shrink() {
+      var progress = Math.min(1, (Date.now() - startTime) / shrinkDuration);
+      weights[shrinkIndex] = 1 + (maxWeight - 1) * (1 - progress);
+      paintSpell();
+      if (progress < 1) {
+        requestAnimationFrame(shrink);
+      } else {
+        startTime = Date.now();
+        grow();
+      }
     }
-    function update() {
+    if (shrinkIndex !== undefined) {
+      shrink();
+    } else {
+      grow();
+    }
+    function grow() {
+      var progress = Math.min(1, (Date.now() - startTime) / growDuration);
+      weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      paintSpell();
+      if (progress < 1) {
+        requestAnimationFrame(grow);
+      }
+    }
+  }
+
+  function startTrial() {
+    current.spellIndex = 0;
+    paintFrame();
+  }
+
+  function finishTrial() {
+    current.trialIndex += 1;
+    if (current.trialIndex == current.numTrials) {
+      finishStage();
+    } else {
+      animateSpellShape(0, current.spellShapes.length - 1);
+      startTrial();
+    }
+  }
+
+  function finishStage() {
+    paintFrame();
+    containers.info.innerHTML = 'stage completed';
+    current.stageIndex += 1;
+    if (current.stageIndex == level.stages.length) {
+      finishLevel();
+      return;
+    }
+    setTimeout(startStage, 3000);
+  }
+
+  function startLevel(levelIndex) {
+    var levelSpec,
+        i;
+    levelSpec = levelSpecs[levelIndex];
+    [ 'name', 'numPairs', 'stages' ].forEach(function (property) {
+      level[property] = levelSpec[property];
+    });
+    shuffle(shapes);
+    shuffle(syllables);
+    shapes.forEach(function (shape, index) {
+      shape.syllable = syllables[index];
+    });
+    level.shapes = shapes.slice(0, level.numPairs);
+    level.shapesOutsideLevel = shapes.slice(level.numPairs);
+    status.inLevel = true;
+    current.stageIndex = 0;
+    startStage();
+  }
+  
+  function finishLevel() {
+    containers.info.innerHTML = 'level completed';
+    status.inLevel = false;
+  }
+
+  function debugMessage() {
+    var parts = new Array(arguments.length),
+        i;
+    for (i = 0; i < arguments.length; ++i) {
+      parts[i] = arguments[i];
+    }
+    document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
+  }
+
+  function hitShape() {
+    current.spellIndex += 1;
+    if (current.spellIndex == current.spellShapes.length) {
+      finishTrial();
+    } else {
+      animateSpellShape(current.spellIndex, current.spellIndex - 1);
+      paintFrame();
+    }
+  }
+
+  function missShape() {
+    animateSpellShape(0, current.spellIndex);
+    startTrial();
+  }
+
+  function handleTouch(x, y) {
+    var offset = offsets.touch,
+        context = contexts.touch,
+        canvas = canvases.touch,
+        width = canvas.width, height = canvas.height,
+        targetShape,
+        tx, ty, dd;
+    if (!status.inStage) {
+      return;
+    }
+
+    // Ignore touches outside the action area.
+    x -= offset.x;
+    y -= offset.y;
+    if (x < 0 || x > width || y < 0 || y > height) {
+      return;
+    }
+
+    // Display the touch span area.
+    context.clearRect(0, 0, width, height);
+    setTimeout(function () {
+      context.clearRect(0, 0, width, height);
+    }, 1500);
+    context.beginPath();
+    context.arc(x, y, sizes.touchSpan / 2, 0, 2 * Math.PI);
+    context.closePath();
+    context.fillStyle = '#000';
+    context.fill();
+
+    // Check whether the target shape is within touch span.
+    targetShape = current.spellShapes[current.spellIndex];
+    tx = targetShape.actionPosition.x * width;
+    ty = targetShape.actionPosition.y * height;
+    function shrink() {
       var progress = Math.min(1, (Date.now() - startTime) / duration);
       if (growIndex !== null) {
         weights[growIndex] = 1 + (maxWeight - 1) * progress;
@@ -495,8 +625,129 @@ var Zorpodnix = (function () {
       paintSpell();
       if (progress < 1) {
         requestAnimationFrame(update);
-      } else {
-        sequel();
+      }
+    }
+    update();
+  }
+
+  function startTrial() {
+    current.spellIndex = 0;
+    paintFrame();
+  }
+
+  function finishTrial() {
+    current.trialIndex += 1;
+    if (current.trialIndex == current.numTrials) {
+      finishStage();
+    } else {
+      animateSpellShape(0, current.spellShapes.length - 1);
+      startTrial();
+    }
+  }
+
+  function finishStage() {
+    paintFrame();
+    containers.info.innerHTML = 'stage completed';
+    current.stageIndex += 1;
+    if (current.stageIndex == level.stages.length) {
+      finishLevel();
+      return;
+    }
+    setTimeout(startStage, 3000);
+  }
+
+  function startLevel(levelIndex) {
+    var levelSpec,
+        i;
+    levelSpec = levelSpecs[levelIndex];
+    [ 'name', 'numPairs', 'stages' ].forEach(function (property) {
+      level[property] = levelSpec[property];
+    });
+    shuffle(shapes);
+    shuffle(syllables);
+    shapes.forEach(function (shape, index) {
+      shape.syllable = syllables[index];
+    });
+    level.shapes = shapes.slice(0, level.numPairs);
+    level.shapesOutsideLevel = shapes.slice(level.numPairs);
+    status.inLevel = true;
+    current.stageIndex = 0;
+    startStage();
+  }
+  
+  function finishLevel() {
+    containers.info.innerHTML = 'level completed';
+    status.inLevel = false;
+  }
+
+  function debugMessage() {
+    var parts = new Array(arguments.length),
+        i;
+    for (i = 0; i < arguments.length; ++i) {
+      parts[i] = arguments[i];
+    }
+    document.getElementById('debug').innerHTML += parts.join(' ') + '<br>';
+  }
+
+  function hitShape() {
+    current.spellIndex += 1;
+    if (current.spellIndex == current.spellShapes.length) {
+      finishTrial();
+    } else {
+      animateSpellShape(current.spellIndex, current.spellIndex - 1);
+      paintFrame();
+    }
+  }
+
+  function missShape() {
+    animateSpellShape(0, current.spellIndex);
+    startTrial();
+  }
+
+  function handleTouch(x, y) {
+    var offset = offsets.touch,
+        context = contexts.touch,
+        canvas = canvases.touch,
+        width = canvas.width, height = canvas.height,
+        targetShape,
+        tx, ty, dd;
+    if (!status.inStage) {
+      return;
+    }
+
+    // Ignore touches outside the action area.
+    x -= offset.x;
+    y -= offset.y;
+    if (x < 0 || x > width || y < 0 || y > height) {
+      return;
+    }
+
+    // Display the touch span area.
+    context.clearRect(0, 0, width, height);
+    setTimeout(function () {
+      context.clearRect(0, 0, width, height);
+    }, 1500);
+    context.beginPath();
+    context.arc(x, y, sizes.touchSpan / 2, 0, 2 * Math.PI);
+    context.closePath();
+    context.fillStyle = '#000';
+    context.fill();
+
+    // Check whether the target shape is within touch span.
+    targetShape = current.spellShapes[current.spellIndex];
+    tx = targetShape.actionPosition.x * width;
+    ty = targetShape.actionPosition.y * height;
+    function shrink() {
+      var progress = Math.min(1, (Date.now() - startTime) / duration);
+      if (growIndex !== null) {
+        weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      }
+      if (shrinkIndex !== undefined) {
+        weights[shrinkIndex] = 1 + (maxWeight - 1) * (1 - progress);
+      }
+      paintSpell();
+      if (progress < 1) {
+        requestAnimationFrame(update);
       }
     }
     update();
