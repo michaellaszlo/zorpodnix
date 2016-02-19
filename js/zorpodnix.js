@@ -465,6 +465,7 @@ var Zorpodnix = (function () {
     current.spellWeights = current.spellShapes.map(function (shape, i) {
       return 1;
     });
+    animateSpellShape(0);
     startTrial();
     status.inStage = true;
   }
@@ -473,19 +474,29 @@ var Zorpodnix = (function () {
     var weights = current.spellWeights,
         maxWeight = layout.spell.maxWeight,
         duration = animation.trialStart.duration * 1000,
-        startTime = Date.now();
+        startTime = Date.now(),
+        sequel = function () {};
     console.log('growIndex ' + growIndex + ', shrinkIndex ' + shrinkIndex);
+    if (growIndex === shrinkIndex) {
+      growIndex = null;
+      duration /= 4;
+      sequel = function () {
+        animateSpellShape(shrinkIndex);
+      };
+    }
     function update() {
       var progress = Math.min(1, (Date.now() - startTime) / duration);
-      weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      if (growIndex !== null) {
+        weights[growIndex] = 1 + (maxWeight - 1) * progress;
+      }
       if (shrinkIndex !== undefined) {
         weights[shrinkIndex] = 1 + (maxWeight - 1) * (1 - progress);
       }
-      if (sizes.spell) {
-        paintSpell();
-      }
+      paintSpell();
       if (progress < 1) {
         requestAnimationFrame(update);
+      } else {
+        sequel();
       }
     }
     update();
@@ -493,12 +504,6 @@ var Zorpodnix = (function () {
 
   function startTrial() {
     current.spellIndex = 0;
-    current.weights = {};
-    if (current.trialIndex == 0) {
-      animateSpellShape(0);
-    } else {
-      animateSpellShape(0, current.spellShapes.length - 1);
-    }
     paintFrame();
   }
 
@@ -507,6 +512,7 @@ var Zorpodnix = (function () {
     if (current.trialIndex == current.numTrials) {
       finishStage();
     } else {
+      animateSpellShape(0, current.spellShapes.length - 1);
       startTrial();
     }
   }
@@ -566,6 +572,7 @@ var Zorpodnix = (function () {
   }
 
   function missShape() {
+    animateSpellShape(0, current.spellIndex);
     startTrial();
   }
 
@@ -646,6 +653,7 @@ var Zorpodnix = (function () {
   function load() {
     makeShapes();
     makeLayout();
+    updateLayout();
     configureTouch();
     window.onresize = resize;
     setTimeout(resize, 200);
