@@ -9,6 +9,16 @@ body, div, canvas {
   overflow: hidden;
 }
 
+.unselectable {
+  -webkit-user-select: none;
+  -khtml-user-drag: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -moz-user-select: -moz-none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 #debug {
   font-family: sans-serif;
   font-size: 15px;

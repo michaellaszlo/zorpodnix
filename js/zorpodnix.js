@@ -269,6 +269,7 @@ var Zorpodnix = (function () {
     // Full-window canvas.
     canvases.window = document.createElement('canvas');
     canvases.window.id = 'windowCanvas';
+    canvases.window.className = 'unselectable';
     document.body.appendChild(canvases.window);
 
     // Containers for the frame and its three sections.
