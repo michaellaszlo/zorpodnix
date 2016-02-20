@@ -18,7 +18,6 @@ var Zorpodnix = (function () {
           ]
         }
       ],
-      levelIndex,
       level = {},
       current = {},
       shapePalettes = [
@@ -249,6 +248,10 @@ var Zorpodnix = (function () {
     offsets.touch = calculateOffset(document.body, canvases.action);
     document.getElementById('debug').style.width = sizes.frame.width + 'px';
     document.getElementById('debug').style.height = sizes.frame.height + 'px';
+
+    if (pageYOffset != 0) {
+      scrollBy(0, -pageYOffset);
+    }
   }
 
   function calculateOffset(root, child) {
@@ -444,10 +447,14 @@ var Zorpodnix = (function () {
     }
   }
 
-  function startLevel(levelIndex) {
-    var levelSpec,
-        i;
-    levelSpec = levelSpecs[levelIndex];
+  function enterLevelSelect() {
+    current.levelIndex = 0;
+    startLevel();
+  }
+
+  function startLevel() {
+    var levelSpec;
+    levelSpec = levelSpecs[current.levelIndex];
     [ 'name', 'numPairs', 'stages' ].forEach(function (property) {
       level[property] = levelSpec[property];
     });
@@ -679,9 +686,7 @@ var Zorpodnix = (function () {
     updateLayout();
     configureTouch();
     window.onresize = resize;
-    setTimeout(resize, 200);
-    levelIndex = 0;
-    startLevel(levelIndex);
+    enterLevelSelect();
   }
 
   return {
