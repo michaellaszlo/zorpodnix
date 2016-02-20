@@ -26,7 +26,6 @@ body, div, canvas {
   opacity: 0.5;
 }
 
-/*
 #infoContainer {
   border: 1px solid #ddd;
 }
@@ -48,4 +47,5 @@ body, div, canvas {
 #actionContainer {
   background: #444;
 }
+/*
 */
