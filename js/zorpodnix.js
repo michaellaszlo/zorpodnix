@@ -47,11 +47,11 @@ var Zorpodnix = (function () {
       animation = {
         spell: {
           grow: {
-            duration: 0.9,
+            duration: 0.4,
             easing: easing.cubicInOut
           },
           shrink: {
-            duration: 0.6,
+            duration: 0.4,
             easing: easing.cubicInOut
           }
         }
@@ -421,31 +421,31 @@ var Zorpodnix = (function () {
         growEasing = animation.spell.grow.easing,
         shrinkDuration = animation.spell.shrink.duration * 1000,
         shrinkEasing = animation.spell.grow.easing,
-        startTime = Date.now();
-    function shrink() {
-      var progress = Math.min(1, (Date.now() - startTime) / shrinkDuration);
-      weights[shrinkIndex] = 1 + (maxWeight - 1) * shrinkEasing(1 - progress);
+        startTime = Date.now(),
+        growDone = false,
+        shrinkDone = (shrinkIndex === undefined),
+        progress;
+    function update() {
+      if (!shrinkDone) {
+        progress = Math.min(1, (Date.now() - startTime) / shrinkDuration);
+        weights[shrinkIndex] = 1 + (maxWeight - 1) * shrinkEasing(1 - progress);
+        if (progress == 1) {
+          shrinkDone = true;
+        }
+      }
+      if (!growDone) {
+        var progress = Math.min(1, (Date.now() - startTime) / growDuration);
+        weights[growIndex] = 1 + (maxWeight - 1) * growEasing(progress);
+        if (progress == 1) {
+          growDone = true;
+        }
+      }
       paintSpell();
-      if (progress < 1) {
-        requestAnimationFrame(shrink);
-      } else {
-        startTime = Date.now();
-        grow();
+      if (!shrinkDone || !growDone) {
+        requestAnimationFrame(update);
       }
     }
-    if (shrinkIndex !== undefined) {
-      shrink();
-    } else {
-      grow();
-    }
-    function grow() {
-      var progress = Math.min(1, (Date.now() - startTime) / growDuration);
-      weights[growIndex] = 1 + (maxWeight - 1) * growEasing(progress);
-      paintSpell();
-      if (progress < 1) {
-        requestAnimationFrame(grow);
-      }
-    }
+    update();
   }
 
   function enterLevelSelect() {
