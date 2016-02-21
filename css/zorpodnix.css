@@ -55,7 +55,7 @@ body, div, canvas {
 #countdownContainer {
   background: #ddd;
 }
-#actionContainer {
-  background: #444;
-}
 */
+#actionContainer {
+  background: #000;
+}

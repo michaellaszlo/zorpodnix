@@ -27,8 +27,8 @@ var Zorpodnix = (function () {
         shapePalette: shapePalettes[0],
         touch: {
           fillOpacity: 0.65,
-          line: '#d8ff15',
-          fill: '#c3ff1e'
+          instant: '#bbc',
+          fill: '#fff'
         }
       },
       shapePainters = [],
@@ -108,9 +108,14 @@ var Zorpodnix = (function () {
     this.painter = painter;
     this.fillColor = fillColor;
   }
-  Shape.prototype.paint = function (context) {
+  Shape.prototype.paint = function (context, options) {
     context.save();
     context.fillStyle = this.fillColor;
+    if (options) {
+      if ('fill' in options) {
+        context.fillStyle = options.fill;
+      }
+    }
     this.painter(context);
     context.restore();
   };
@@ -249,7 +254,7 @@ var Zorpodnix = (function () {
     }
 
     sizes.touch.diameter = sizes.action.height / 5;
-    sizes.touch.line = sizes.action.height / 100;
+    sizes.touch.line = sizes.action.height / 200;
     sizes.touch.numDashes = 30;
 
     containers.info.style.fontSize =
@@ -610,7 +615,7 @@ var Zorpodnix = (function () {
 
   function animateTouch(x, y, isHit) {
     var canvas = canvases.touch,
-        width = canvas.width, height = canvas.height,
+        size = sizes.action.width,
         context = contexts.touch,
         duration = animation.touch.duration * 1000,
         halflife = duration / 2,
@@ -618,38 +623,43 @@ var Zorpodnix = (function () {
         startTime,
         progress,
         radius = sizes.touch.diameter / 2,
-        fillRadius,
-        lineWidth,
         targetShape = current.spellShapes[current.spellIndex],
         tx, ty;
     function grow() {
       progress = Math.min(1, (Date.now() - startTime) / halflife);
-      context.clearRect(0, 0, width, height);
-      // Perimeter.
+      context.clearRect(0, 0, size, size);
+      // Instant disc.
       context.save();
       context.globalAlpha = color.fillOpacity;
-      fillRadius = Math.sqrt(progress) * radius;
-      lineWidth = Math.min(sizes.touch.line, radius - fillRadius);
-      context.lineWidth = lineWidth;
-      context.strokeStyle = color.line;
       context.beginPath();
-      context.arc(x, y, radius - lineWidth / 2, 0, 2 * Math.PI);
-      context.stroke();
+      context.arc(x, y, radius, 0, 2 * Math.PI);
+      context.fillStyle = color.instant;
+      context.fill();
       context.closePath();
-      // Interior.
+      // Gradual fill.
       context.beginPath();
-      context.arc(x, y, fillRadius, 0, 2 * Math.PI);
+      context.arc(x, y, Math.sqrt(progress) * radius, 0, 2 * Math.PI);
       context.fillStyle = color.fill;
       context.fill();
       context.closePath();
       context.restore();
-      tx = targetShape.actionPosition.x * width;
-      ty = targetShape.actionPosition.y * height;
+      tx = targetShape.actionPosition.x * size;
+      ty = targetShape.actionPosition.y * size;
       if (isHit) {
+        // Highlight the shape.
+        context.save();
+        //context.globalAlpha = Math.min(1, 2 * progress) * color.fillOpacity;
+        context.globalAlpha = Math.min(1, progress);
+        context.translate(tx, ty);
+        context.scale(sizes.actionUnit, sizes.actionUnit);
+        targetShape.paint(context, { fill: color.fill });
+        context.restore();
       } else {
+        // Cheat for playtesting purposes: circle the target shape.
         context.beginPath();
         context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
-        context.lineWidth = sizes.touch.line / 2;
+        context.lineWidth = sizes.touch.line;
+        context.strokeStyle = '#fff';
         context.stroke();
         context.closePath();
       }
@@ -657,35 +667,7 @@ var Zorpodnix = (function () {
         requestAnimationFrame(grow);
       } else {
         startTime = Date.now();
-        requestAnimationFrame(isHit ? hit : shrink);
-      }
-    }
-    function hit() {
-      progress = Math.min(1, (Date.now() - startTime) / halflife);
-      context.clearRect(0, 0, width, height);
-      context.save();
-      context.globalAlpha = color.fillOpacity;
-      context.beginPath();
-      context.arc(x, y, radius, 0, 2 * Math.PI);
-      context.fillStyle = color.fill;
-      context.fill();
-      context.closePath();
-      context.restore();
-      context.save();
-      context.globalAlpha = Math.min(1, 2 * progress) * color.fillOpacity;
-      tx = targetShape.actionPosition.x * width;
-      ty = targetShape.actionPosition.y * height;
-      context.beginPath();
-      context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
-      context.fillStyle = color.fill;
-      context.fill();
-      context.closePath();
-      context.restore();
-      if (progress < 1) {
-        requestAnimationFrame(hit);
-      } else {
-        startTime = Date.now();
-        requestAnimationFrame(fade);
+        requestAnimationFrame(isHit ? fade : shrink);
       }
     }
     function fade() {
@@ -700,12 +682,11 @@ var Zorpodnix = (function () {
     }
     function shrink() {
       progress = Math.min(1, (Date.now() - startTime) / halflife);
-      context.clearRect(0, 0, width, height);
+      context.clearRect(0, 0, size, size);
       context.save();
       context.globalAlpha = color.fillOpacity;
-      fillRadius = Math.sqrt(1 - progress) * radius;
       context.beginPath();
-      context.arc(x, y, fillRadius, 0, 2 * Math.PI);
+      context.arc(x, y, Math.sqrt(1 - progress) * radius, 0, 2 * Math.PI);
       context.fillStyle = color.fill;
       context.fill();
       context.closePath();
@@ -717,7 +698,7 @@ var Zorpodnix = (function () {
       }
     }
     function clear() {
-      context.clearRect(0, 0, width, height);
+      context.clearRect(0, 0, size, size);
     }
     startTime = Date.now();
     grow();
