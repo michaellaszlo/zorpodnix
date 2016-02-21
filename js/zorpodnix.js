@@ -24,7 +24,12 @@ var Zorpodnix = (function () {
         [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
       ],
       colors = {
-        shapePalette: shapePalettes[0]
+        shapePalette: shapePalettes[0],
+        touch: {
+          fillOpacity: 0.5,
+          line: '#c3ff1e',
+          fill: '#c3ff1e'
+        }
       },
       shapePainters = [],
       shapeNames = [],
@@ -45,6 +50,9 @@ var Zorpodnix = (function () {
         }
       },
       animation = {
+        touch: {
+          duration: 0.3
+        },
         spell: {
           grow: {
             duration: 0.4,
@@ -240,7 +248,9 @@ var Zorpodnix = (function () {
       }
     }
 
-    sizes.touchSpan = sizes.action.height / 10;
+    sizes.touch.diameter = sizes.action.height / 5;
+    sizes.touch.line = sizes.action.height / 100;
+    sizes.touch.numDashes = 30;
 
     containers.info.style.fontSize =
         layout.info.fontFactor * sizes.info.height + 'px';
@@ -598,6 +608,65 @@ var Zorpodnix = (function () {
     startTrial();
   }
 
+  function animateTouch(x, y, isHit) {
+    var canvas = canvases.touch,
+        width = canvas.width, height = canvas.height,
+        context = contexts.touch,
+        duration = animation.touch.duration * 1000,
+        color = colors.touch,
+        startTime,
+        progress,
+        radius = sizes.touch.diameter / 2,
+        fillRadius,
+        lineWidth,
+        targetShape = current.spellShapes[current.spellIndex],
+        tx, ty;
+    function update() {
+      progress = Math.min(1, (Date.now() - startTime) / duration);
+      context.clearRect(0, 0, width, height);
+      // Perimeter.
+      context.save();
+      context.globalAlpha = 1 - progress;
+      fillRadius = Math.sqrt(progress) * radius;
+      lineWidth = Math.min(sizes.touch.line, radius - fillRadius);
+      context.lineWidth = lineWidth;
+      context.strokeStyle = color.line;
+      context.beginPath();
+      context.arc(x, y, radius - lineWidth / 2, 0, 2 * Math.PI);
+      context.stroke();
+      context.closePath();
+      context.restore();
+      // Interior.
+      context.save();
+      context.globalAlpha = color.fillOpacity;
+      context.beginPath();
+      context.arc(x, y, fillRadius, 0, 2 * Math.PI);
+      context.fillStyle = color.fill;
+      context.fill();
+      context.closePath();
+      context.restore();
+      tx = targetShape.actionPosition.x * width;
+      ty = targetShape.actionPosition.y * height;
+      if (isHit) {
+      } else {
+        context.beginPath();
+        context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
+        context.lineWidth = sizes.touch.line / 3;
+        context.stroke();
+        context.closePath();
+      }
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        requestAnimationFrame(function () {
+          context.clearRect(0, 0, width, height);
+        });
+      }
+    }
+    startTime = Date.now();
+    update();
+  }
+
   function handleTouch(x, y) {
     var offset = offsets.touch,
         context = contexts.touch,
@@ -616,38 +685,17 @@ var Zorpodnix = (function () {
       return;
     }
 
-    // Display the touch span area.
-    context.clearRect(0, 0, width, height);
-    setTimeout(function () {
-      context.clearRect(0, 0, width, height);
-    }, 1500);
-    context.beginPath();
-    context.arc(x, y, sizes.touchSpan / 2, 0, 2 * Math.PI);
-    context.closePath();
-    context.fillStyle = '#000';
-    context.fill();
-
-    // Check whether the target shape is within touch span.
+    // Check whether the target shape is within touch.diameter.
     targetShape = current.spellShapes[current.spellIndex];
     tx = targetShape.actionPosition.x * width;
     ty = targetShape.actionPosition.y * height;
     dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
-    if (dd <= Math.pow(sizes.actionUnit + sizes.touchSpan / 2, 2)) {
+    if (dd <= Math.pow(sizes.actionUnit + sizes.touch.diameter / 2, 2)) {
+      animateTouch(x, y, true);
       hitShape();
-      // Graphical effects to illustrate a hit.
-      context.beginPath();
-      context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
-      context.closePath();
-      context.fill();
     } else {
+      animateTouch(x, y, false);
       missShape();
-      // Graphical effects to illustrate a miss.
-      context.beginPath();
-      context.arc(tx, ty, sizes.actionUnit - 2, 0, 2 * Math.PI);
-      context.closePath();
-      context.lineWidth = 4;
-      context.strokeStyle = '#b00';
-      context.stroke();
     }
   }
 
