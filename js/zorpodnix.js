@@ -26,8 +26,8 @@ var Zorpodnix = (function () {
       colors = {
         shapePalette: shapePalettes[0],
         touch: {
-          fillOpacity: 0.5,
-          line: '#c3ff1e',
+          fillOpacity: 0.65,
+          line: '#d8ff15',
           fill: '#c3ff1e'
         }
       },
@@ -51,7 +51,7 @@ var Zorpodnix = (function () {
       },
       animation = {
         touch: {
-          duration: 0.3
+          duration: 0.4
         },
         spell: {
           grow: {
@@ -613,6 +613,7 @@ var Zorpodnix = (function () {
         width = canvas.width, height = canvas.height,
         context = contexts.touch,
         duration = animation.touch.duration * 1000,
+        halflife = duration / 2,
         color = colors.touch,
         startTime,
         progress,
@@ -621,12 +622,12 @@ var Zorpodnix = (function () {
         lineWidth,
         targetShape = current.spellShapes[current.spellIndex],
         tx, ty;
-    function update() {
-      progress = Math.min(1, (Date.now() - startTime) / duration);
+    function grow() {
+      progress = Math.min(1, (Date.now() - startTime) / halflife);
       context.clearRect(0, 0, width, height);
       // Perimeter.
       context.save();
-      context.globalAlpha = 1 - progress;
+      context.globalAlpha = color.fillOpacity;
       fillRadius = Math.sqrt(progress) * radius;
       lineWidth = Math.min(sizes.touch.line, radius - fillRadius);
       context.lineWidth = lineWidth;
@@ -635,10 +636,7 @@ var Zorpodnix = (function () {
       context.arc(x, y, radius - lineWidth / 2, 0, 2 * Math.PI);
       context.stroke();
       context.closePath();
-      context.restore();
       // Interior.
-      context.save();
-      context.globalAlpha = color.fillOpacity;
       context.beginPath();
       context.arc(x, y, fillRadius, 0, 2 * Math.PI);
       context.fillStyle = color.fill;
@@ -651,20 +649,78 @@ var Zorpodnix = (function () {
       } else {
         context.beginPath();
         context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
-        context.lineWidth = sizes.touch.line / 3;
+        context.lineWidth = sizes.touch.line / 2;
         context.stroke();
         context.closePath();
       }
       if (progress < 1) {
-        requestAnimationFrame(update);
+        requestAnimationFrame(grow);
       } else {
-        requestAnimationFrame(function () {
-          context.clearRect(0, 0, width, height);
-        });
+        startTime = Date.now();
+        requestAnimationFrame(isHit ? hit : shrink);
       }
     }
+    function hit() {
+      progress = Math.min(1, (Date.now() - startTime) / halflife);
+      context.clearRect(0, 0, width, height);
+      context.save();
+      context.globalAlpha = color.fillOpacity;
+      context.beginPath();
+      context.arc(x, y, radius, 0, 2 * Math.PI);
+      context.fillStyle = color.fill;
+      context.fill();
+      context.closePath();
+      context.restore();
+      context.save();
+      context.globalAlpha = Math.min(1, 2 * progress) * color.fillOpacity;
+      tx = targetShape.actionPosition.x * width;
+      ty = targetShape.actionPosition.y * height;
+      context.beginPath();
+      context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
+      context.fillStyle = color.fill;
+      context.fill();
+      context.closePath();
+      context.restore();
+      if (progress < 1) {
+        requestAnimationFrame(hit);
+      } else {
+        startTime = Date.now();
+        requestAnimationFrame(fade);
+      }
+    }
+    function fade() {
+      progress = Math.min(1, (Date.now() - startTime) / halflife);
+      canvas.style.opacity = 1 - progress;
+      if (progress < 1) {
+        requestAnimationFrame(fade);
+      } else {
+        canvas.style.opacity = 1;
+        clear();
+      }
+    }
+    function shrink() {
+      progress = Math.min(1, (Date.now() - startTime) / halflife);
+      context.clearRect(0, 0, width, height);
+      context.save();
+      context.globalAlpha = color.fillOpacity;
+      fillRadius = Math.sqrt(1 - progress) * radius;
+      context.beginPath();
+      context.arc(x, y, fillRadius, 0, 2 * Math.PI);
+      context.fillStyle = color.fill;
+      context.fill();
+      context.closePath();
+      context.restore();
+      if (progress < 1) {
+        requestAnimationFrame(shrink);
+      } else {
+        requestAnimationFrame(clear);
+      }
+    }
+    function clear() {
+      context.clearRect(0, 0, width, height);
+    }
     startTime = Date.now();
-    update();
+    grow();
   }
 
   function handleTouch(x, y) {
