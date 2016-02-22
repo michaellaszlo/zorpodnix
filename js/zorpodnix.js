@@ -27,7 +27,7 @@ var Zorpodnix = (function () {
         shapePalette: shapePalettes[0],
         touch: {
           fillOpacity: 0.65,
-          instant: '#bbc',
+          instant: '#888',
           fill: '#fff'
         }
       },
@@ -55,11 +55,7 @@ var Zorpodnix = (function () {
         },
         spell: {
           grow: {
-            duration: 0.4,
-            easing: easing.cubicInOut
-          },
-          shrink: {
-            duration: 0.4,
+            seconds: 0.4,
             easing: easing.cubicInOut
           }
         }
@@ -92,7 +88,8 @@ var Zorpodnix = (function () {
       offsets = {},
       canvases = {},
       contexts = {},
-      status = {};
+      status = {},
+      animationGroups = {};
 
   function addShapePainter(name, painter) {
     shapePainters.push(painter);
@@ -127,6 +124,68 @@ var Zorpodnix = (function () {
         shapes.push(new Shape(name, painter, color));
       });
     });
+  }
+
+  function Animation(groupName, action, seconds) {
+    this.groupName = groupName;
+    this.action = action;
+    this.duration = (seconds === undefined ? null : seconds * 1000);
+  }
+  Animation.prototype.launch = function () {
+    if (!(this.groupName in animationGroups)) {
+      animationGroups[this.groupName] = [];
+    }
+    animationGroups[this.groupName].push(this);
+    this.previouslyElapsed = 0;
+    this.latestStart = Date.now();
+  }
+  Animation.prototype.pause = function (currentTime) {
+    this.previouslyElapsed += currentTime - this.latestStart;
+  }
+  Animation.prototype.resume = function (currentTime) {
+    this.latestStart = currentTime;
+  }
+  Animation.prototype.update = function (currentTime) {
+    var elapsed = this.previouslyElapsed + currentTime - this.latestStart;
+    if (this.duration === null) {
+      this.action();
+      return;
+    }
+    if (elapsed > this.duration) {
+      this.finished = true;
+      return;
+    }
+    this.action(elapsed / this.duration);
+  }
+
+  function processAnimations() {
+    var group,
+        names = Object.keys(animationGroups),
+        name,
+        nameIx,
+        animationIx,
+        animation,
+        currentTime = Date.now();
+    for (nameIx = names.length - 1; nameIx >= 0; --nameIx) {
+      name = names[nameIx];
+      group = animationGroups[name];
+      for (animationIx = group.length - 1; animationIx >= 0; --animationIx) {
+        animation = group[animationIx];
+        if (animation.finished) {
+          // Lazily delete animations by popping them off the list. This is
+          // a kludge. We really need a doubly linked list so that we can
+          // immediately delete any animation.
+          if (animationIx == group.length - 1) {
+            group.pop();
+          }
+          continue;
+        }
+        animation.update(currentTime);
+      }
+      if (group.length == 0) {
+        delete animationGroups[name];
+      }
+    }
   }
 
   function updateLayout() {
@@ -255,7 +314,7 @@ var Zorpodnix = (function () {
 
     sizes.touch.diameter = sizes.action.height / 5;
     sizes.touch.line = sizes.action.height / 200;
-    sizes.touch.numDashes = 30;
+    sizes.action.unit = sizes.action.height / 10;
 
     containers.info.style.fontSize =
         layout.info.fontFactor * sizes.info.height + 'px';
@@ -313,51 +372,36 @@ var Zorpodnix = (function () {
     });
   }
 
-  function paintFrame() {
-    var context,
-        size;
-    if (!('spell' in sizes)) {
-      return;
-    }
+  function nextCycle() {
+    processAnimations();
+    paintInfo();
+    paintAction();
+    paintSpell();
+    requestAnimationFrame(nextCycle);
+  }
 
-    // Info.
+  function paintInfo() {
     containers.info.innerHTML = [
       level.name,
       'stage ' + (current.stageIndex + 1) + ' / ' + level.stages.length,
       'trial ' + (current.trialIndex + 1) + ' / ' + current.numTrials,
     ].join('<br>');
+  }
 
-    // Spell.
-    paintSpell();
-
-    // Erase action.
-    context = contexts.action;
-    size = sizes.action.width;
+  function paintAction() {
+    var context = contexts.action,
+        size = sizes.action.width;
     context.clearRect(0, 0, size, size);
-
-    // Paint action.
-    sizes.actionUnit = 0.95 * size / current.numCols / 2;
     current.actionShapes.forEach(function (shape, index) {
       var position = current.actionShapes[index].actionPosition,
           x = position.x,
           y = position.y;
       context.save();
       context.translate(x * size, y * size);
-      context.scale(sizes.actionUnit, sizes.actionUnit);
+      context.scale(sizes.action.unit, sizes.action.unit);
       shape.paint(context);
       context.restore();
     });
-
-  }
-
-  function shuffle(things) {
-    var i, j, temp;
-    for (i = 1; i < things.length; ++i) {
-      j = Math.floor(Math.random() * (i + 1));
-      temp = things[j];
-      things[j] = things[i];
-      things[i] = temp;
-    }
   }
 
   function paintSpell() {
@@ -429,43 +473,50 @@ var Zorpodnix = (function () {
     }
   }
 
-  function animateSpellShape(growIndex, shrinkIndex) {
+  function transitionSpellShape(growIndex, shrinkIndex) {
     var weights = current.spellWeights,
         maxWeight = layout.spell.maxWeight,
-        growDuration = animation.spell.grow.duration * 1000,
-        growEasing = animation.spell.grow.easing,
-        shrinkDuration = animation.spell.shrink.duration * 1000,
-        shrinkEasing = animation.spell.grow.easing,
-        startTime = Date.now(),
-        growDone = false,
-        shrinkDone = (shrinkIndex === undefined),
-        progress;
-    function update() {
-      if (!shrinkDone) {
-        progress = Math.min(1, (Date.now() - startTime) / shrinkDuration);
-        weights[shrinkIndex] = 1 + (maxWeight - 1) * shrinkEasing(1 - progress);
-        if (progress == 1) {
-          shrinkDone = true;
+        seconds = animation.spell.grow.seconds,
+        easing = animation.spell.grow.easing,
+        animator,
+        action;
+    if (shrinkIndex === undefined) {
+      action = function (progress) {
+        weights[growIndex] = 1 + (maxWeight - 1) * easing(progress);
+      };
+    } else if (shrinkIndex === growIndex) {
+      action = function (progress) {
+        if (progress < 0.5) {
+          weights[shrinkIndex] = 1 + (maxWeight - 1) *
+              easing(1 - 2 * progress);
+        } else {
+          weights[growIndex] = 1 + (maxWeight - 1) *
+              easing(2 * (progress - 0.5));
         }
-      }
-      if (!growDone) {
-        var progress = Math.min(1, (Date.now() - startTime) / growDuration);
-        weights[growIndex] = 1 + (maxWeight - 1) * growEasing(progress);
-        if (progress == 1) {
-          growDone = true;
-        }
-      }
-      paintSpell();
-      if (!shrinkDone || !growDone) {
-        requestAnimationFrame(update);
-      }
+      };
+    } else {
+      action = function (progress) {
+        weights[shrinkIndex] = 1 + (maxWeight - 1) * easing(1 - progress);
+        weights[growIndex] = 1 + (maxWeight - 1) * easing(progress);
+      };
     }
-    update();
+    animator = new Animation('spell', action, seconds);
+    animator.launch();
   }
 
   function enterLevelSelect() {
     current.levelIndex = 0;
     startLevel();
+  }
+
+  function shuffle(things) {
+    var i, j, temp;
+    for (i = 1; i < things.length; ++i) {
+      j = Math.floor(Math.random() * (i + 1));
+      temp = things[j];
+      things[j] = things[i];
+      things[i] = temp;
+    }
   }
 
   function startLevel() {
@@ -484,6 +535,7 @@ var Zorpodnix = (function () {
     status.inLevel = true;
     current.stageIndex = 0;
     startStage();
+    nextCycle();
   }
   
   function finishLevel() {
@@ -499,8 +551,7 @@ var Zorpodnix = (function () {
         decoyShapes,
         candidate,
         found,
-        i, j, k,
-        numCols;
+        i, j, k;
 
     // Read the indices of the syllables that compose the spell.
     if (stage.show) {
@@ -553,13 +604,10 @@ var Zorpodnix = (function () {
     // Action shapes: a shuffled array of spell shapes and decoy shapes.
     current.actionShapes = spellShapes.concat(decoyShapes);
     shuffle(current.actionShapes);
-    numCols = Math.ceil(Math.sqrt(current.actionShapes.length));
-    current.numCols = numCols;
-    current.actionShapes.forEach(function (shape, index) {
-      var c = index % numCols, r  = (index - c) / numCols;
+    current.actionShapes.forEach(function (shape) {
       shape.actionPosition = {
-        x: (c + 0.5) / numCols,
-        y: (r + 0.5) / numCols
+        x: Math.random(),
+        y: Math.random()
       };
     });
 
@@ -567,13 +615,12 @@ var Zorpodnix = (function () {
     current.spellWeights = current.spellShapes.map(function (shape, i) {
       return 1;
     });
-    animateSpellShape(0);
+    transitionSpellShape(0);
     startTrial();
     status.inStage = true;
   }
 
   function finishStage() {
-    paintFrame();
     containers.info.innerHTML = 'stage completed';
     current.stageIndex += 1;
     if (current.stageIndex == level.stages.length) {
@@ -585,7 +632,6 @@ var Zorpodnix = (function () {
 
   function startTrial() {
     current.spellIndex = 0;
-    paintFrame();
   }
 
   function finishTrial() {
@@ -593,7 +639,7 @@ var Zorpodnix = (function () {
     if (current.trialIndex == current.numTrials) {
       finishStage();
     } else {
-      animateSpellShape(0, current.spellShapes.length - 1);
+      transitionSpellShape(0, current.spellShapes.length - 1);
       startTrial();
     }
   }
@@ -603,13 +649,12 @@ var Zorpodnix = (function () {
     if (current.spellIndex == current.spellShapes.length) {
       finishTrial();
     } else {
-      animateSpellShape(current.spellIndex, current.spellIndex - 1);
-      paintFrame();
+      transitionSpellShape(current.spellIndex, current.spellIndex - 1);
     }
   }
 
   function missShape() {
-    animateSpellShape(0, current.spellIndex);
+    transitionSpellShape(0, current.spellIndex);
     startTrial();
   }
 
@@ -617,91 +662,76 @@ var Zorpodnix = (function () {
     var canvas = canvases.touch,
         size = sizes.action.width,
         context = contexts.touch,
-        duration = animation.touch.duration * 1000,
-        halflife = duration / 2,
         color = colors.touch,
-        startTime,
-        progress,
         radius = sizes.touch.diameter / 2,
         targetShape = current.spellShapes[current.spellIndex],
-        tx, ty;
-    function grow() {
-      progress = Math.min(1, (Date.now() - startTime) / halflife);
+        tx, ty,
+        animator;
+    animator = new Animation('touch', function (progress) {
       context.clearRect(0, 0, size, size);
-      // Instant disc.
-      context.save();
-      context.globalAlpha = color.fillOpacity;
-      context.beginPath();
-      context.arc(x, y, radius, 0, 2 * Math.PI);
-      context.fillStyle = color.instant;
-      context.fill();
-      context.closePath();
-      // Gradual fill.
-      context.beginPath();
-      context.arc(x, y, Math.sqrt(progress) * radius, 0, 2 * Math.PI);
-      context.fillStyle = color.fill;
-      context.fill();
-      context.closePath();
-      context.restore();
-      tx = targetShape.actionPosition.x * size;
-      ty = targetShape.actionPosition.y * size;
       if (isHit) {
         // Highlight the shape.
         context.save();
         //context.globalAlpha = Math.min(1, 2 * progress) * color.fillOpacity;
         context.globalAlpha = Math.min(1, progress);
         context.translate(tx, ty);
-        context.scale(sizes.actionUnit, sizes.actionUnit);
+        context.scale(sizes.action.unit, sizes.action.unit);
         targetShape.paint(context, { fill: color.fill });
         context.restore();
       } else {
         // Cheat for playtesting purposes: circle the target shape.
         context.beginPath();
-        context.arc(tx, ty, sizes.actionUnit, 0, 2 * Math.PI);
+        context.arc(tx, ty, sizes.action.unit, 0, 2 * Math.PI);
         context.lineWidth = sizes.touch.line;
         context.strokeStyle = '#fff';
         context.stroke();
         context.closePath();
       }
-      if (progress < 1) {
-        requestAnimationFrame(grow);
+      if (progress < 0.5) {
+        // Instant disc.
+        context.save();
+        context.globalAlpha = color.fillOpacity;
+        context.beginPath();
+        context.arc(x, y, radius, 0, 2 * Math.PI);
+        context.fillStyle = color.instant;
+        context.fill();
+        context.closePath();
+        // Gradual fill.
+        context.beginPath();
+        context.arc(x, y, Math.sqrt(progress) * radius, 0, 2 * Math.PI);
+        context.fillStyle = color.fill;
+        context.fill();
+        context.closePath();
+        context.restore();
+        tx = targetShape.actionPosition.x * size;
+        ty = targetShape.actionPosition.y * size;
+      } else if (isHit) {
+        // Fade out.
+        /*
+        progress = Math.min(1, (Date.now() - startTime) / halflife);
+        canvas.style.opacity = 1 - progress;
+        if (progress < 1) {
+          requestAnimationFrame(fade);
+        } else {
+          canvas.style.opacity = 1;
+          clear();
+        }
+        */
       } else {
-        startTime = Date.now();
-        requestAnimationFrame(isHit ? fade : shrink);
+        // Shrink the filled disc.
+        context.clearRect(0, 0, size, size);
+        context.save();
+        context.globalAlpha = color.fillOpacity;
+        context.beginPath();
+        context.arc(x, y, Math.sqrt(2 * (1 - progress)) * radius,
+            0, 2 * Math.PI);
+        context.fillStyle = color.fill;
+        context.fill();
+        context.closePath();
+        context.restore();
       }
-    }
-    function fade() {
-      progress = Math.min(1, (Date.now() - startTime) / halflife);
-      canvas.style.opacity = 1 - progress;
-      if (progress < 1) {
-        requestAnimationFrame(fade);
-      } else {
-        canvas.style.opacity = 1;
-        clear();
-      }
-    }
-    function shrink() {
-      progress = Math.min(1, (Date.now() - startTime) / halflife);
-      context.clearRect(0, 0, size, size);
-      context.save();
-      context.globalAlpha = color.fillOpacity;
-      context.beginPath();
-      context.arc(x, y, Math.sqrt(1 - progress) * radius, 0, 2 * Math.PI);
-      context.fillStyle = color.fill;
-      context.fill();
-      context.closePath();
-      context.restore();
-      if (progress < 1) {
-        requestAnimationFrame(shrink);
-      } else {
-        requestAnimationFrame(clear);
-      }
-    }
-    function clear() {
-      context.clearRect(0, 0, size, size);
-    }
-    startTime = Date.now();
-    grow();
+    }, animation.touch.seconds);
+    animator.launch();
   }
 
   function handleTouch(x, y) {
@@ -727,7 +757,7 @@ var Zorpodnix = (function () {
     tx = targetShape.actionPosition.x * width;
     ty = targetShape.actionPosition.y * height;
     dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
-    if (dd <= Math.pow(sizes.actionUnit + sizes.touch.diameter / 2, 2)) {
+    if (dd <= Math.pow(sizes.action.unit + sizes.touch.diameter / 2, 2)) {
       animateTouch(x, y, true);
       hitShape();
     } else {
@@ -763,7 +793,6 @@ var Zorpodnix = (function () {
 
   function resize() {
     updateLayout();
-    paintFrame();
   }
 
   function load() {
