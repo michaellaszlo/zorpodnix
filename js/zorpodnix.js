@@ -607,10 +607,38 @@ var Zorpodnix = (function () {
     current.actionShapes = spellShapes.concat(decoyShapes);
     shuffle(current.actionShapes);
     current.actionShapes.forEach(function (shape) {
+      var animator,
+          angle = Math.random() * 2 * Math.PI,
+          step = 0.001,
+          dx = Math.cos(angle) * step,
+          dy = Math.sin(angle) * step;
+      console.log(dx / step, dy / step,
+          Math.pow(dx / step, 2) + Math.pow(dy / step, 2));
       shape.actionPosition = {
         x: Math.random(),
         y: Math.random()
       };
+      animator = new Animation('action', function (progress) {
+        var x = shape.actionPosition.x,
+            y = shape.actionPosition.y;
+        x += dx;
+        while (x < 0) {
+          x += 1;
+        }
+        while (x >= 1) {
+          x -= 1;
+        }
+        y += dy;
+        while (y < 0) {
+          y += 1;
+        }
+        while (y >= 1) {
+          y -= 1;
+        }
+        shape.actionPosition.x = x;
+        shape.actionPosition.y = y;
+      }, function () {});
+      animator.launch();
     });
 
     current.trialIndex = 0;
