@@ -126,10 +126,10 @@ var Zorpodnix = (function () {
     });
   }
 
-  function Animation(groupName, action, erase, seconds) {
+  function Animation(groupName, action, cleanup, seconds) {
     this.groupName = groupName;
     this.action = action;
-    this.erase = erase;
+    this.cleanup= cleanup;
     this.duration = (seconds === undefined ? null : seconds * 1000);
   }
   Animation.prototype.launch = function () {
@@ -139,13 +139,13 @@ var Zorpodnix = (function () {
     animationGroups[this.groupName].push(this);
     this.previouslyElapsed = 0;
     this.latestStart = Date.now();
-  }
+  };
   Animation.prototype.pause = function (currentTime) {
     this.previouslyElapsed += currentTime - this.latestStart;
-  }
+  };
   Animation.prototype.resume = function (currentTime) {
     this.latestStart = currentTime;
-  }
+  };
   Animation.prototype.update = function (currentTime) {
     var elapsed = this.previouslyElapsed + currentTime - this.latestStart;
     if (this.duration === null) {
@@ -153,11 +153,24 @@ var Zorpodnix = (function () {
       return;
     }
     if (elapsed > this.duration) {
-      this.finished = true;
-      this.erase();
+      this.delete();
       return;
     }
     this.action(elapsed / this.duration);
+  };
+  Animation.prototype.delete = function () {
+    this.finished = true;
+    this.cleanup();
+  };
+
+  function clearAnimationGroup(groupName) {
+    var group = animationGroups[groupName];
+    if (group === undefined) {
+      return;
+    }
+    while (group.length != 0) {
+      group.pop().delete();
+    }
   }
 
   function processAnimations() {
@@ -481,7 +494,8 @@ var Zorpodnix = (function () {
         seconds = animation.spell.grow.seconds,
         easing = animation.spell.grow.easing,
         animator,
-        action;
+        action,
+        cleanup;
     if (shrinkIndex === undefined) {
       action = function (progress) {
         weights[growIndex] = 1 + (maxWeight - 1) * easing(progress);
@@ -502,7 +516,12 @@ var Zorpodnix = (function () {
         weights[growIndex] = 1 + (maxWeight - 1) * easing(progress);
       };
     }
-    animator = new Animation('spell', action, function () {}, seconds);
+    cleanup = function () {
+      weights[shrinkIndex] = 1;
+      weights[growIndex] = maxWeight;
+    };
+    clearAnimationGroup('spell');
+    animator = new Animation('spell', action, cleanup, seconds);
     animator.launch();
   }
 
@@ -606,14 +625,13 @@ var Zorpodnix = (function () {
     // Action shapes: a shuffled array of spell shapes and decoy shapes.
     current.actionShapes = spellShapes.concat(decoyShapes);
     shuffle(current.actionShapes);
+    clearAnimationGroup('action');
     current.actionShapes.forEach(function (shape) {
       var animator,
           angle = Math.random() * 2 * Math.PI,
           step = 0.001,
           dx = Math.cos(angle) * step,
           dy = Math.sin(angle) * step;
-      console.log(dx / step, dy / step,
-          Math.pow(dx / step, 2) + Math.pow(dy / step, 2));
       shape.actionPosition = {
         x: Math.random(),
         y: Math.random()
@@ -697,6 +715,7 @@ var Zorpodnix = (function () {
         targetShape = current.spellShapes[current.spellIndex],
         tx, ty,
         animator;
+    clearAnimationGroup('touch');
     animator = new Animation('touch', function (progress) {
       context.clearRect(0, 0, size, size);
       tx = targetShape.actionPosition.x * size;
