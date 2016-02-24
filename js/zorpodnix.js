@@ -27,7 +27,7 @@ var Zorpodnix = (function () {
         shapePalette: shapePalettes[0],
         touch: {
           fillOpacity: 0.65,
-          instant: '#888',
+          instant: '#666',
           fill: '#fff'
         }
       },
@@ -80,6 +80,9 @@ var Zorpodnix = (function () {
           passiveGray: 0.6,
           activeGray: 0.1,
           fontFamily: "'Bitter', sans-serif"
+        },
+        action: {
+          radiusFactor: 1 / 8
         }
       },
       sizes = {},
@@ -329,7 +332,7 @@ var Zorpodnix = (function () {
 
     sizes.touch.diameter = sizes.action.height / 5;
     sizes.touch.line = sizes.action.height / 200;
-    sizes.action.unit = sizes.action.height / 10;
+    sizes.action.radius = sizes.action.height * layout.action.radiusFactor;
 
     containers.info.style.fontSize =
         layout.info.fontFactor * sizes.info.height + 'px';
@@ -413,7 +416,7 @@ var Zorpodnix = (function () {
           y = position.y;
       context.save();
       context.translate(x * size, y * size);
-      context.scale(sizes.action.unit, sizes.action.unit);
+      context.scale(sizes.action.radius, sizes.action.radius);
       shape.paint(context);
       context.restore();
     });
@@ -726,13 +729,13 @@ var Zorpodnix = (function () {
         context.globalAlpha = 2 * Math.min(progress, 1 - progress) *
             color.fillOpacity;
         context.translate(tx, ty);
-        context.scale(sizes.action.unit, sizes.action.unit);
+        context.scale(sizes.action.radius, sizes.action.radius);
         targetShape.paint(context, { fill: color.fill });
         context.restore();
       } else {
         // Cheat for playtesting purposes: circle the target shape.
         context.beginPath();
-        context.arc(tx, ty, sizes.action.unit, 0, 2 * Math.PI);
+        context.arc(tx, ty, sizes.action.radius, 0, 2 * Math.PI);
         context.lineWidth = sizes.touch.line;
         context.strokeStyle = '#fff';
         context.stroke();
@@ -749,7 +752,7 @@ var Zorpodnix = (function () {
         context.closePath();
         // Gradual fill.
         context.beginPath();
-        context.arc(x, y, Math.sqrt(progress) * radius, 0, 2 * Math.PI);
+        context.arc(x, y, Math.sqrt(2 * progress) * radius, 0, 2 * Math.PI);
         context.fillStyle = color.fill;
         context.fill();
         context.closePath();
@@ -763,6 +766,14 @@ var Zorpodnix = (function () {
         context.fill();
         context.restore();
       } else {
+        // Instant disc.
+        context.save();
+        context.globalAlpha = color.fillOpacity;
+        context.beginPath();
+        context.arc(x, y, radius, 0, 2 * Math.PI);
+        context.fillStyle = color.instant;
+        context.fill();
+        context.closePath();
         // Shrink the filled disc.
         context.save();
         context.globalAlpha = color.fillOpacity;
@@ -803,7 +814,7 @@ var Zorpodnix = (function () {
     tx = targetShape.actionPosition.x * width;
     ty = targetShape.actionPosition.y * height;
     dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
-    if (dd <= Math.pow(sizes.action.unit + sizes.touch.diameter / 2, 2)) {
+    if (dd <= Math.pow(sizes.action.radius + sizes.touch.diameter / 2, 2)) {
       animateTouch(x, y, true);
       hitShape();
     } else {
