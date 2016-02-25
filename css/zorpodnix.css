@@ -33,7 +33,8 @@ body, div, canvas {
   color: #333;
 }
 
-#touchCanvas {
+#windowCanvas {
+  z-index: 100;
 }
 
 /*

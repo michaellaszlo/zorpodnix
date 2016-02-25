@@ -60,6 +60,9 @@ var Zorpodnix = (function () {
           seconds: 0.5,
           easing: easing.cubicInOut
         },
+        hit: {
+          seconds: 1
+        },
         spell: {
           grow: {
             seconds: 0.5,
@@ -352,7 +355,7 @@ var Zorpodnix = (function () {
     containers.info.style.fontSize =
         layout.info.fontFactor * sizes.info.height + 'px';
 
-    offsets.touch = calculateOffset(document.body, canvases.action);
+    offsets.action = calculateOffset(document.body, canvases.action);
     document.getElementById('debug').style.width = sizes.frame.width + 'px';
     document.getElementById('debug').style.height = sizes.frame.height + 'px';
 
@@ -405,7 +408,15 @@ var Zorpodnix = (function () {
     });
   }
 
+  function clearContext(name) {
+    contexts[name].clearRect(0, 0, sizes[name].width, sizes[name].height);
+  }
+
   function nextCycle() {
+    clearContext('window');
+    clearContext('spell');
+    clearContext('touch');
+    clearContext('action');
     processAnimations();
     paintInfo();
     paintAction();
@@ -426,7 +437,6 @@ var Zorpodnix = (function () {
         size = sizes.action.width,
         radius = sizes.action.radius;
     context.lineWidth = layout.shape.lineFactor;
-    context.clearRect(0, 0, size, size);
     current.actionShapes.forEach(function (shape, index) {
       var position = current.actionShapes[index].actionPosition,
           x = position.x,
@@ -479,7 +489,6 @@ var Zorpodnix = (function () {
     syllableX = (size / 2) * (1 + layout.spell.syllableFactorX);
     contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
     context.lineWidth = shapeRadius
-    context.clearRect(0, 0, size, size);
     bottom = 0;
     for (i = 0; i < spellLength; ++i) {
       shape = current.spellShapes[i];
@@ -517,7 +526,6 @@ var Zorpodnix = (function () {
         maxWeight = layout.spell.maxWeight,
         seconds = animation.spell.grow.seconds,
         easing = animation.spell.grow.easing,
-        animator,
         action,
         cleanup;
     if (shrinkIndex === undefined) {
@@ -545,8 +553,7 @@ var Zorpodnix = (function () {
       weights[growIndex] = maxWeight;
     };
     clearAnimationGroup('spell');
-    animator = new Animation('spell', action, cleanup, seconds);
-    animator.launch();
+    (new Animation('spell', action, cleanup, seconds)).launch();
   }
 
   function enterLevelSelect() {
@@ -651,8 +658,7 @@ var Zorpodnix = (function () {
     shuffle(current.actionShapes);
     clearAnimationGroup('action');
     current.actionShapes.forEach(function (shape) {
-      var animator,
-          angle = Math.random() * 2 * Math.PI,
+      var angle = Math.random() * 2 * Math.PI,
           step = 0.001,
           dx = Math.cos(angle) * step,
           dy = Math.sin(angle) * step;
@@ -660,7 +666,7 @@ var Zorpodnix = (function () {
         x: Math.random(),
         y: Math.random()
       };
-      animator = new Animation('action', function (progress) {
+      (new Animation('action', function (progress) {
         var x = shape.actionPosition.x,
             y = shape.actionPosition.y;
         x += dx;
@@ -679,8 +685,7 @@ var Zorpodnix = (function () {
         }
         shape.actionPosition.x = x;
         shape.actionPosition.y = y;
-      }, function () {});
-      animator.launch();
+      }, function () {})).launch();
     });
 
     current.trialIndex = 0;
@@ -717,12 +722,33 @@ var Zorpodnix = (function () {
   }
 
   function hitShape() {
+    var shape = current.spellShapes[current.spellIndex],
+        syllable = shape.syllable,
+        offset = offsets.action,
+        scale = sizes.action.width,
+        x0 = offset.x + scale * shape.actionPosition.x,
+        y0 = offset.y + scale * shape.actionPosition.y,
+        context = contexts.window;
     current.spellIndex += 1;
     if (current.spellIndex == current.spellShapes.length) {
       finishTrial();
     } else {
       transitionSpellShape(current.spellIndex, current.spellIndex - 1);
     }
+    (new Animation('hit', function (progress) {
+      var x = x0 + (sizes.window.width / 2 - x0) * progress,
+          y = y0 + (sizes.window.height / 2 - y0) * progress,
+          fontSize = scale / 4 * 5 * progress,
+          width, height;
+      context.fillStyle = shape.fillColor;
+      context.font = fontSize + 'px ' + layout.spell.fontFamily;
+      height = fontSize * 0.5;
+      width = context.measureText(syllable).width;
+      context.save();
+      context.globalAlpha = 1 - Math.max(0, 2 * (progress - 0.5));
+      context.fillText(syllable, x - width / 2, y + height / 2);
+      context.restore();
+    }, function () {}, animation.hit.seconds)).launch();
   }
 
   function missShape() {
@@ -737,13 +763,10 @@ var Zorpodnix = (function () {
         color = colors.touch,
         radius = sizes.touch.diameter / 2,
         targetShape = current.spellShapes[current.spellIndex],
-        tx, ty,
-        animator;
+        tx, ty;
     clearAnimationGroup('touch');
-    animator = new Animation('touch', function (progress) {
-
+    (new Animation('touch', function (progress) {
       progress = animation.touch.easing(progress);
-      context.clearRect(0, 0, size, size);
       tx = targetShape.actionPosition.x * size;
       ty = targetShape.actionPosition.y * size;
       if (isHit) {
@@ -810,14 +833,11 @@ var Zorpodnix = (function () {
         context.closePath();
         context.restore();
       }
-    }, function () {
-      context.clearRect(0, 0, size, size);
-    }, animation.touch.seconds);
-    animator.launch();
+    }, function () {}, animation.touch.seconds)).launch();
   }
 
   function handleTouch(x, y) {
-    var offset = offsets.touch,
+    var offset = offsets.action,
         context = contexts.touch,
         canvas = canvases.touch,
         width = canvas.width, height = canvas.height,
