@@ -726,9 +726,13 @@ var Zorpodnix = (function () {
         syllable = shape.syllable,
         offset = offsets.action,
         scale = sizes.action.width,
-        x0 = offset.x + scale * shape.actionPosition.x,
-        y0 = offset.y + scale * shape.actionPosition.y,
-        context = contexts.window;
+        actionPosition = shape.actionPosition,
+        x0 = offset.x + scale * actionPosition.x,
+        y0 = offset.y + scale * actionPosition.y,
+        syllableContext = contexts.window,
+        shapeContext = contexts.touch,
+        shapeCanvas = canvases.touch,
+        strokeColor = colors.action.stroke.highlight;
     current.spellIndex += 1;
     if (current.spellIndex == current.spellShapes.length) {
       finishTrial();
@@ -740,14 +744,24 @@ var Zorpodnix = (function () {
           y = y0 + (sizes.window.height / 2 - y0) * progress,
           fontSize = scale / 4 * 5 * progress,
           width, height;
-      context.fillStyle = shape.fillColor;
-      context.font = fontSize + 'px ' + layout.spell.fontFamily;
+      // Flash the word.
+      syllableContext.fillStyle = shape.fillColor;
+      syllableContext.font = fontSize + 'px ' + layout.spell.fontFamily;
       height = fontSize * 0.5;
-      width = context.measureText(syllable).width;
-      context.save();
-      context.globalAlpha = 1 - Math.max(0, 2 * (progress - 0.5));
-      context.fillText(syllable, x - width / 2, y + height / 2);
-      context.restore();
+      width = syllableContext.measureText(syllable).width;
+      syllableContext.save();
+      syllableContext.globalAlpha = 1 - Math.max(0, 2 * (progress - 0.5));
+      syllableContext.fillText(syllable, x - width / 2, y + height / 2);
+      syllableContext.restore();
+      // Highlight the shape.
+      shapeContext.save();
+      shapeContext.globalAlpha = Math.min(1, 2 * (1 - progress));
+      shapeContext.translate(actionPosition.x * shapeCanvas.width,
+          actionPosition.y * shapeCanvas.height);
+      shapeContext.lineWidth = layout.shape.lineFactor;
+      shapeContext.scale(sizes.action.radius, sizes.action.radius);
+      shape.paint(shapeContext, { stroke: strokeColor });
+      shapeContext.restore();
     }, function () {}, animation.hit.seconds)).launch();
   }
 
@@ -769,17 +783,7 @@ var Zorpodnix = (function () {
       progress = animation.touch.easing(progress);
       tx = targetShape.actionPosition.x * size;
       ty = targetShape.actionPosition.y * size;
-      if (isHit) {
-        // Highlight the shape.
-        context.save();
-        context.globalAlpha = 2 * Math.min(progress, 1 - progress) *
-            color.fillOpacity;
-        context.translate(tx, ty);
-        context.lineWidth = layout.shape.lineFactor;
-        context.scale(sizes.action.radius, sizes.action.radius);
-        targetShape.paint(context, { fill: color.fill });
-        context.restore();
-      } else {
+      if (!isHit) {
         // Cheat for playtesting purposes: circle the target shape.
         context.beginPath();
         context.arc(tx, ty, sizes.action.radius, 0, 2 * Math.PI);
