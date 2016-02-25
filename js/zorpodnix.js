@@ -432,20 +432,31 @@ var Zorpodnix = (function () {
     ].join('<br>');
   }
 
+  function paintShape(shape, context, radius, x, y, options) {
+    context.save();
+    context.translate(x, y);
+    context.scale(radius, radius);
+    shape.paint(context, options);
+    context.restore();
+  }
+
   function paintAction() {
     var context = contexts.action,
         size = sizes.action.width,
-        radius = sizes.action.radius;
+        radius = sizes.action.radius,
+        wraparound, i;
     context.lineWidth = layout.shape.lineFactor;
     current.actionShapes.forEach(function (shape, index) {
       var position = current.actionShapes[index].actionPosition,
-          x = position.x,
-          y = position.y;
-      context.save();
-      context.translate(x * size, y * size);
-      context.scale(radius, radius);
-      shape.paint(context);
-      context.restore();
+          x = position.x * size,
+          y = position.y * size;
+      wraparound = [ [ x, y ],
+          [ size + x, y ], [ x - size, y ], [ x, size + y ], [ x, y - size ],
+          [ size + x, y - size ], [ x - size, size + y ],
+          [ size + x, size + y ], [ x - size, y - size ] ];
+      for (i = 0; i < wraparound.length; ++i) {
+        paintShape(shape, context, radius, wraparound[i][0], wraparound[i][1]);
+      }
     });
   }
 
@@ -725,10 +736,10 @@ var Zorpodnix = (function () {
     var shape = current.spellShapes[current.spellIndex],
         syllable = shape.syllable,
         offset = offsets.action,
-        scale = sizes.action.width,
         actionPosition = shape.actionPosition,
-        x0 = offset.x + scale * actionPosition.x,
-        y0 = offset.y + scale * actionPosition.y,
+        x0 = offset.x + sizes.action.width * actionPosition.x,
+        y0 = offset.y + sizes.action.height * actionPosition.y,
+        tx, ty, radius, options, width, height,
         syllableContext = contexts.window,
         shapeContext = contexts.touch,
         shapeCanvas = canvases.touch,
@@ -742,7 +753,7 @@ var Zorpodnix = (function () {
     (new Animation('hit', function (progress) {
       var x = x0 + (sizes.window.width / 2 - x0) * progress,
           y = y0 + (sizes.window.height / 2 - y0) * progress,
-          fontSize = scale / 4 * 5 * progress,
+          fontSize = sizes.action.width / 4 * 5 * progress,
           width, height;
       // Flash the word.
       syllableContext.fillStyle = shape.fillColor;
@@ -754,13 +765,28 @@ var Zorpodnix = (function () {
       syllableContext.fillText(syllable, x - width / 2, y + height / 2);
       syllableContext.restore();
       // Highlight the shape.
+      tx = actionPosition.x * shapeCanvas.width;
+      ty = actionPosition.y * shapeCanvas.height;
+      radius = sizes.action.radius;
+      options = { stroke: strokeColor };
       shapeContext.save();
       shapeContext.globalAlpha = Math.min(1, 2 * (1 - progress));
-      shapeContext.translate(actionPosition.x * shapeCanvas.width,
-          actionPosition.y * shapeCanvas.height);
       shapeContext.lineWidth = layout.shape.lineFactor;
-      shapeContext.scale(sizes.action.radius, sizes.action.radius);
-      shape.paint(shapeContext, { stroke: strokeColor });
+      paintShape(shape, shapeContext, radius, tx, ty, options);
+      width = sizes.action.width;
+      height = sizes.action.height;
+      if (tx <= radius) {
+        paintShape(shape, shapeContext, radius, width + tx, ty, options);
+      }
+      if (width - tx <= radius) {
+        paintShape(shape, shapeContext, radius, tx - width, ty, options);
+      }
+      if (ty <= radius) {
+        paintShape(shape, shapeContext, radius, tx, height + ty, options);
+      }
+      if (height - ty <= radius) {
+        paintShape(shape, shapeContext, radius, tx, ty - height, options);
+      }
       shapeContext.restore();
     }, function () {}, animation.hit.seconds)).launch();
   }
@@ -775,23 +801,9 @@ var Zorpodnix = (function () {
         size = sizes.action.width,
         context = contexts.touch,
         color = colors.touch,
-        radius = sizes.touch.diameter / 2,
-        targetShape = current.spellShapes[current.spellIndex],
-        tx, ty;
-    clearAnimationGroup('touch');
+        radius = sizes.touch.diameter / 2;
     (new Animation('touch', function (progress) {
       progress = animation.touch.easing(progress);
-      tx = targetShape.actionPosition.x * size;
-      ty = targetShape.actionPosition.y * size;
-      if (!isHit) {
-        // Cheat for playtesting purposes: circle the target shape.
-        context.beginPath();
-        context.arc(tx, ty, sizes.action.radius, 0, 2 * Math.PI);
-        context.lineWidth = sizes.touch.line;
-        context.strokeStyle = '#fff';
-        context.stroke();
-        context.closePath();
-      }
       if (progress < 0.5) {
         // Instant disc.
         context.save();
@@ -800,6 +812,11 @@ var Zorpodnix = (function () {
         context.arc(x, y, radius, 0, 2 * Math.PI);
         context.fillStyle = color.instant;
         context.fill();
+        if (false) {
+          context.lineWidth = layout.shape.lineFactor * radius;
+          context.strokeStyle = color.fill;
+          context.stroke();
+        }
         context.closePath();
         // Gradual fill.
         context.beginPath();
@@ -813,19 +830,13 @@ var Zorpodnix = (function () {
         // Fade out the filled disc.
         context.save();
         context.globalAlpha = 2 * (1 - progress) * color.fillOpacity;
+        context.beginPath();
         context.arc(x, y, radius, 0, 2 * Math.PI);
         context.fillStyle = color.fill;
         context.fill();
+        context.closePath();
         context.restore();
       } else {
-        // Instant disc.
-        context.save();
-        context.globalAlpha = color.fillOpacity;
-        context.beginPath();
-        context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = color.instant;
-        context.fill();
-        context.closePath();
         // Shrink the filled disc.
         context.save();
         context.globalAlpha = color.fillOpacity;
@@ -844,9 +855,11 @@ var Zorpodnix = (function () {
     var offset = offsets.action,
         context = contexts.touch,
         canvas = canvases.touch,
-        width = canvas.width, height = canvas.height,
+        size = sizes.action.width,
         targetShape,
-        tx, ty, dd;
+        tx, ty,
+        wraparound,
+        X, Y, i, dd, ddTarget, isHit;
     if (!status.inStage) {
       return;
     }
@@ -854,20 +867,37 @@ var Zorpodnix = (function () {
     // Ignore touches outside the action area.
     x -= offset.x;
     y -= offset.y;
-    if (x < 0 || x > width || y < 0 || y > height) {
+    if (x < 0 || x > size || y < 0 || y > size) {
       return;
     }
 
-    // Check whether the target shape is within touch.diameter.
     targetShape = current.spellShapes[current.spellIndex];
-    tx = targetShape.actionPosition.x * width;
-    ty = targetShape.actionPosition.y * height;
-    dd = Math.pow(x - tx, 2) + Math.pow(y - ty, 2);
-    if (dd <= Math.pow(sizes.action.radius + sizes.touch.diameter / 2, 2)) {
-      animateTouch(x, y, true);
+    tx = targetShape.actionPosition.x * size;
+    ty = targetShape.actionPosition.y * size;
+
+    wraparound = [ [ x, y ],
+        [ size + x, y ], [ x - size, y ], [ x, size + y ], [ x, y - size ],
+        [ size + x, y - size ], [ x - size, size + y ],
+        [ size + x, size + y ], [ x - size, y - size ] ];
+    isHit = false;
+    ddTarget = Math.pow(sizes.action.radius + sizes.touch.diameter / 2, 2);
+    for (i = 0; i < wraparound.length; ++i) {
+      X = wraparound[i][0];
+      Y = wraparound[i][1];
+      dd = Math.pow(X - tx, 2) + Math.pow(Y - ty, 2);
+      if (dd <= ddTarget) {
+        isHit = true;
+        break;
+      }
+    }
+
+    clearAnimationGroup('touch');
+    for (i = 0; i < wraparound.length; ++i) {
+      animateTouch(wraparound[i][0], wraparound[i][1], isHit);
+    }
+    if (isHit) {
       hitShape();
     } else {
-      animateTouch(x, y, false);
       missShape();
     }
   }
