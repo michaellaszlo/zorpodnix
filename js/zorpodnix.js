@@ -29,6 +29,12 @@ var Zorpodnix = (function () {
           fillOpacity: 0.65,
           instant: '#666',
           fill: '#fff'
+        },
+        action: {
+          stroke: {
+            normal: '#222',
+            highlight: '#ddd'
+          }
         }
       },
       shapePainters = [],
@@ -51,11 +57,12 @@ var Zorpodnix = (function () {
       },
       animation = {
         touch: {
-          seconds: 0.4
+          seconds: 0.5,
+          easing: easing.cubicInOut
         },
         spell: {
           grow: {
-            seconds: 0.4,
+            seconds: 0.5,
             easing: easing.cubicInOut
           }
         }
@@ -83,6 +90,9 @@ var Zorpodnix = (function () {
         },
         action: {
           radiusFactor: 1 / 8
+        },
+        shape: {
+          lineFactor: 1 / 20
         }
       },
       sizes = {},
@@ -107,13 +117,18 @@ var Zorpodnix = (function () {
     this.name = name;
     this.painter = painter;
     this.fillColor = fillColor;
+    this.strokeColor = colors.action.stroke.normal;
   }
   Shape.prototype.paint = function (context, options) {
     context.save();
     context.fillStyle = this.fillColor;
+    context.strokeStyle = this.strokeColor;
     if (options) {
       if ('fill' in options) {
         context.fillStyle = options.fill;
+      }
+      if ('stroke' in options) {
+        context.strokeStyle = options.stroke;
       }
     }
     this.painter(context);
@@ -408,7 +423,9 @@ var Zorpodnix = (function () {
 
   function paintAction() {
     var context = contexts.action,
-        size = sizes.action.width;
+        size = sizes.action.width,
+        radius = sizes.action.radius;
+    context.lineWidth = layout.shape.lineFactor;
     context.clearRect(0, 0, size, size);
     current.actionShapes.forEach(function (shape, index) {
       var position = current.actionShapes[index].actionPosition,
@@ -416,7 +433,7 @@ var Zorpodnix = (function () {
           y = position.y;
       context.save();
       context.translate(x * size, y * size);
-      context.scale(sizes.action.radius, sizes.action.radius);
+      context.scale(radius, radius);
       shape.paint(context);
       context.restore();
     });
@@ -440,6 +457,7 @@ var Zorpodnix = (function () {
         shapeX, syllableX,
         unitSpan, maxSpan,
         span,
+        shapeRadius,
         fontSize,
         textWidth,
         passiveGray = Math.floor(layout.spell.passiveGray * 256),
@@ -460,6 +478,7 @@ var Zorpodnix = (function () {
     fontSize = layout.spell.fontFactor * size;
     syllableX = (size / 2) * (1 + layout.spell.syllableFactorX);
     contexts.spell.font = fontSize + 'px ' + layout.spell.fontFamily;
+    context.lineWidth = shapeRadius
     context.clearRect(0, 0, size, size);
     bottom = 0;
     for (i = 0; i < spellLength; ++i) {
@@ -478,7 +497,9 @@ var Zorpodnix = (function () {
       if (showShape) {
         context.save();
         context.translate(shapeX, y);
-        context.scale(spanFill * span / 2, spanFill * span / 2);
+        shapeRadius = spanFill * span / 2;
+        context.lineWidth = layout.shape.lineFactor;
+        context.scale(shapeRadius, shapeRadius);
         context.fillStyle = '#ddd';
         shape.paint(context);
         context.restore();
@@ -720,6 +741,8 @@ var Zorpodnix = (function () {
         animator;
     clearAnimationGroup('touch');
     animator = new Animation('touch', function (progress) {
+
+      progress = animation.touch.easing(progress);
       context.clearRect(0, 0, size, size);
       tx = targetShape.actionPosition.x * size;
       ty = targetShape.actionPosition.y * size;
@@ -729,6 +752,7 @@ var Zorpodnix = (function () {
         context.globalAlpha = 2 * Math.min(progress, 1 - progress) *
             color.fillOpacity;
         context.translate(tx, ty);
+        context.lineWidth = layout.shape.lineFactor;
         context.scale(sizes.action.radius, sizes.action.radius);
         targetShape.paint(context, { fill: color.fill });
         context.restore();
@@ -752,7 +776,8 @@ var Zorpodnix = (function () {
         context.closePath();
         // Gradual fill.
         context.beginPath();
-        context.arc(x, y, Math.sqrt(2 * progress) * radius, 0, 2 * Math.PI);
+        context.arc(x, y, Math.sqrt(2 * progress) * radius,
+            0, 2 * Math.PI);
         context.fillStyle = color.fill;
         context.fill();
         context.closePath();

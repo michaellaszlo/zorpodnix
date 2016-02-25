@@ -8,7 +8,7 @@ Zorpodnix.addShapePainter('triangle', function (context) {
     angle += increment;
     context.lineTo(Math.cos(angle), Math.sin(angle));
   }
-  context.closePath(); context.fill();
+  context.closePath(); context.fill(); context.stroke();
 });
 Zorpodnix.addShapePainter('square', function (context) {
   var sides = 4, i,
@@ -18,7 +18,7 @@ Zorpodnix.addShapePainter('square', function (context) {
     angle += increment;
     context.lineTo(Math.cos(angle), Math.sin(angle));
   }
-  context.closePath(); context.fill();
+  context.closePath(); context.fill(); context.stroke();
 });
 Zorpodnix.addShapePainter('hexagon', function (context) {
   var sides = 6, i,
@@ -28,11 +28,11 @@ Zorpodnix.addShapePainter('hexagon', function (context) {
     angle += increment;
     context.lineTo(Math.cos(angle), Math.sin(angle));
   }
-  context.closePath(); context.fill();
+  context.closePath(); context.fill(); context.stroke();
 });
 Zorpodnix.addShapePainter('circle', function (context) {
   context.beginPath(); context.arc(0, 0, 1, 0, 2 * Math.PI);
-  context.closePath(); context.fill();
+  context.closePath(); context.fill(); context.stroke();
 });
 
 // end shapes.js
