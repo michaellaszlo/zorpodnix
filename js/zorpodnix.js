@@ -688,6 +688,9 @@ var Zorpodnix = (function () {
     });
 
     // Hide a certain number of shapes according to the phase index.
+    spellShapes.forEach(function (shape) {
+      shape.hidden = false;
+    });
     current.numHidden = current.phaseIndex;
     hiddenShapes = choose(spellShapes, current.numHidden);
     hiddenShapes.forEach(function (shape) {
