@@ -1,26 +1,7 @@
 var Zorpodnix = (function () {
   'use strict';
 
-  var levelSpecs = [
-        {
-          name: 'novice',
-          numPairs: 4,
-          stages: [
-            //{ show: [ 0, 1 ], test: [ 2 ] },
-            { show: [ 0, 1, 2 ] },
-            { show: [ 1, 2 ], test: [ 0 ] },
-            { show: [ 0, 3 ], test: [ 1 ] },
-            { show: [ 3 ], test: [ 1, 2 ] },
-            { test: [ 0, 1, 3 ] },
-            { test: [ 0, 2, 3 ] },
-            { test: [ 1, 2, 3 ] },
-            { test: [ 0, 1, 2 ] }
-          ]
-        }
-      ],
-      level = {},
-      current = {},
-      shapePalettes = [
+  var shapePalettes = [
         [ '#e0de99', '#e08739', '#b23331', '#4f68a7', '#6ca76f' ]
       ],
       colors = {
@@ -105,7 +86,9 @@ var Zorpodnix = (function () {
       canvases = {},
       contexts = {},
       status = {},
-      animationGroups = {};
+      animationGroups = {},
+      level = {},
+      current = {};
 
   function addShapePainter(name, painter) {
     shapePainters.push(painter);
@@ -116,16 +99,15 @@ var Zorpodnix = (function () {
     syllables = someSyllables;
   }
 
-  function Shape(name, painter, fillColor) {
+  function Shape(name, painter, color) {
     this.name = name;
     this.painter = painter;
-    this.fillColor = fillColor;
-    this.strokeColor = colors.action.stroke.normal;
+    this.color = color;
   }
   Shape.prototype.paint = function (context, options) {
     context.save();
-    context.fillStyle = this.fillColor;
-    context.strokeStyle = this.strokeColor;
+    context.fillStyle = this.color;
+    context.strokeStyle = colors.action.stroke.normal;
     if (options) {
       if ('fill' in options) {
         context.fillStyle = options.fill;
@@ -426,9 +408,9 @@ var Zorpodnix = (function () {
 
   function paintInfo() {
     containers.info.innerHTML = [
-      level.name,
-      'stage ' + (current.stageIndex + 1) + ' / ' + level.stages.length,
-      'trial ' + (current.trialIndex + 1) + ' / ' + current.numTrials,
+      'phase ' + (current.phaseIndex + 1) + ' / 4',
+      'stage ' + (current.stageIndex + 1) + ' / 4',
+      'hide ' + (current.numHidden) + ' / 3'
     ].join('<br>');
   }
 
@@ -506,14 +488,7 @@ var Zorpodnix = (function () {
       span = unitSpan * weights[i];
       bottom += span;
       y = bottom - span / 2;
-      // If this is the final trial, show the shape iff we've already matched
-      // the syllable. For all other trials, show the shape iff it is not
-      // being tested.
-      if (isFinalTrial) {
-        showShape = (i < current.spellIndex);
-      } else {
-        showShape = !shape.tested;
-      }
+      showShape = (i < current.spellIndex || !shape.hidden);
       if (showShape) {
         context.save();
         context.translate(shapeX, y);
@@ -567,11 +542,6 @@ var Zorpodnix = (function () {
     (new Animation('spell', action, cleanup, seconds)).launch();
   }
 
-  function enterLevelSelect() {
-    current.levelIndex = 0;
-    startLevel();
-  }
-
   function shuffle(things) {
     var i, j, temp;
     for (i = 1; i < things.length; ++i) {
@@ -582,22 +552,48 @@ var Zorpodnix = (function () {
     }
   }
 
-  function startLevel() {
-    var levelSpec;
-    levelSpec = levelSpecs[current.levelIndex];
-    [ 'name', 'numPairs', 'stages' ].forEach(function (property) {
-      level[property] = levelSpec[property];
+  function choose(list, num) {
+    var result = new Array(num),
+        i,
+        indices = list.map(function (element, index) {
+      return index;
     });
+    shuffle(indices);
+    for (i = 0; i < num; ++i) {
+      result[i] = list[indices[i]];
+    }
+    return result;
+  }
+
+  function startLevel() {
+    var numPairs = level.numPairs = 4,
+        levelShapeNames = choose(shapeNames, numPairs),
+        levelColors = choose(colors.shapePalette, numPairs),
+        i, j, temp, name, color;
+    // Randomly assign syllables to shapes.
     shuffle(shapes);
     shuffle(syllables);
     shapes.forEach(function (shape, index) {
       shape.syllable = syllables[index];
     });
-    level.shapes = shapes.slice(0, level.numPairs);
-    level.shapesOutsideLevel = shapes.slice(level.numPairs);
+    // Choose four shapes to play with. Make colors and outlines unique.
+    for (i = 0; i < numPairs; ++i) {
+      name = levelShapeNames[i];
+      color = levelColors[i];
+      for (j = i; j < shapes.length; ++j) {
+        if (shapes[j].name == name && shapes[j].color == color) {
+          break;
+        }
+      }
+      temp = shapes[i];
+      shapes[i] = shapes[j];
+      shapes[j] = temp;
+    }
+    level.shapes = shapes.slice(0, numPairs);
+    level.shapesOutsideLevel = shapes.slice(numPairs);
     status.inLevel = true;
-    current.stageIndex = 0;
-    startStage();
+    current.phaseIndex = 0;
+    startPhase();
     nextCycle();
   }
   
@@ -606,39 +602,31 @@ var Zorpodnix = (function () {
     status.inLevel = false;
   }
 
+  function startPhase() {
+    current.stageIndex = 0;
+    startStage();
+  }
+
+  function finishPhase() {
+  }
+
   function startStage() {
     var stageIndex = current.stageIndex,
-        stage = level.stages[stageIndex],
-        spellLength,
-        spellShapes = [],
+        spellLength = 3,
+        spellShapes = current.spellShapes = [],
+        hiddenShapes,
         decoyShapes,
         candidate,
         found,
         i, j, k;
 
-    // Read the indices of the syllables that compose the spell.
-    if (stage.show) {
-      stage.show.forEach(function (index) {
-        var shape = level.shapes[index];
-        shape.tested = false;
-        spellShapes.push(shape);
-      });
-      // Shown syllables are only hidden in the last trial.
-      current.numTrials = 3;
-    } else {
-      // If no syllables are shown, only have one trial.
-      current.numTrials = 1;
+    // Omit one shape from the spell.
+    for (i = 0; i < level.numPairs; ++i) {
+      if (i != stageIndex) {
+        spellShapes.push(level.shapes[i]);
+      }
     }
-    if (stage.test) {
-      stage.test.forEach(function (index) {
-        var shape = level.shapes[index];
-        shape.tested = true;
-        spellShapes.push(shape);
-      });
-    }
-    spellLength = spellShapes.length;
     shuffle(spellShapes);
-    current.spellShapes = spellShapes;
 
     // Select decoy shapes to be used in the action area.
     // Take some decoys among the level shapes.
@@ -699,7 +687,13 @@ var Zorpodnix = (function () {
       }, function () {})).launch();
     });
 
-    current.trialIndex = 0;
+    // Hide a certain number of shapes according to the phase index.
+    current.numHidden = current.phaseIndex;
+    hiddenShapes = choose(spellShapes, current.numHidden);
+    hiddenShapes.forEach(function (shape) {
+      shape.hidden = true;
+    });
+
     current.spellWeights = current.spellShapes.map(function (shape, i) {
       return 1;
     });
@@ -711,7 +705,7 @@ var Zorpodnix = (function () {
   function finishStage() {
     containers.info.innerHTML = 'stage completed';
     current.stageIndex += 1;
-    if (current.stageIndex == level.stages.length) {
+    if (current.stageIndex == level.numPairs) {
       finishLevel();
       return;
     }
@@ -723,13 +717,23 @@ var Zorpodnix = (function () {
   }
 
   function finishTrial() {
-    current.trialIndex += 1;
-    if (current.trialIndex == current.numTrials) {
+    var indices = [],
+        i;
+    current.numHidden += 1;
+    if (current.numHidden > current.spellShapes.length) {
       finishStage();
-    } else {
-      transitionSpellShape(0, current.spellShapes.length - 1);
-      startTrial();
+      return;
     }
+    current.spellShapes.forEach(function (shape, index) {
+      if (!shape.hidden) {
+        indices.push(index);
+      }
+    });
+    console.log(indices);
+    shuffle(indices);
+    current.spellShapes[indices[0]].hidden = true;
+    transitionSpellShape(0, current.spellShapes.length - 1);
+    startTrial();
   }
 
   function hitShape() {
@@ -756,7 +760,7 @@ var Zorpodnix = (function () {
           fontSize = sizes.action.width / 4 * 5 * progress,
           width, height;
       // Flash the word.
-      syllableContext.fillStyle = shape.fillColor;
+      syllableContext.fillStyle = shape.color;
       syllableContext.font = fontSize + 'px ' + layout.spell.fontFamily;
       height = fontSize * 0.5;
       width = syllableContext.measureText(syllable).width;
@@ -937,7 +941,7 @@ var Zorpodnix = (function () {
     updateLayout();
     configureTouch();
     window.onresize = resize;
-    enterLevelSelect();
+    startLevel();
   }
 
   return {

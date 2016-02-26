@@ -1,4 +1,37 @@
 
+==============
+New idea
+
+Simplified level design:
+- there is only one type of level
+- a level consists of four random shape-syllable pairs
+- the shapes have distinct colors and distinct outlines
+
+The level consists of four phases:
+- in the first phase, there are four trials per stage:
+  - show all
+  - hide one
+  - hide two
+  - hide three
+- second phase:
+  - hide one
+  - hide two
+  - hide three
+- third phase:
+  - hide two
+  - hide three
+- fourth phase:
+  - hide three
+
+There are four stages in each phase:
+- because there are C(4, 3) = 4 combination
+- a phase exercises each of the four combinations
+
+
+
+==============
+Old ideas
+
 -----
 Levels
 
@@ -7,10 +40,10 @@ vocabulary of shape-syllable pairs. The size of the vocabulary depends
 on the difficulty level of the game session. You can choose among
 four levels:
 
-- novice: 4 pairs (tutorial level with tool tips)
+- novice: 4 pairs
 - mage: 8 pairs
-- archmage: 16 pairs
-- oracle: 32 pairs
+- archmage: 12 pairs
+- oracle: 16 pairs
 
 
 -----
