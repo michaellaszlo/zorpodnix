@@ -692,8 +692,8 @@ var Zorpodnix = (function () {
       shape.hidden = false;
     });
     current.numHidden = current.phaseIndex;
-    hiddenShapes = choose(spellShapes, current.numHidden);
-    hiddenShapes.forEach(function (shape) {
+    current.hiddenShapes = choose(spellShapes, current.numHidden);
+    current.hiddenShapes.forEach(function (shape) {
       shape.hidden = true;
     });
 
@@ -721,7 +721,7 @@ var Zorpodnix = (function () {
 
   function finishTrial() {
     var indices = [],
-        i;
+        i, shape;
     current.numHidden += 1;
     if (current.numHidden > current.spellShapes.length) {
       finishStage();
@@ -732,9 +732,9 @@ var Zorpodnix = (function () {
         indices.push(index);
       }
     });
-    console.log(indices);
-    shuffle(indices);
-    current.spellShapes[indices[0]].hidden = true;
+    shape = current.spellShapes[Math.floor(Math.random() * indices.length)];
+    shape.hidden = true;
+    current.hiddenShapes.push(shape);
     transitionSpellShape(0, current.spellShapes.length - 1);
     startTrial();
   }
@@ -800,6 +800,10 @@ var Zorpodnix = (function () {
 
   function missShape() {
     transitionSpellShape(0, current.spellIndex);
+    if (current.numHidden > 0) {
+      current.numHidden -= 1;
+      current.hiddenShapes.pop().hidden = false;
+    }
     startTrial();
   }
 
