@@ -48,6 +48,12 @@ var Zorpodnix = (function () {
           grow: {
             seconds: 0.5,
             easing: easing.cubicInOut
+          },
+          vanish: {
+            seconds: 0.5
+          },
+          reveal: {
+            seconds: 0.5
           }
         }
       },
@@ -132,7 +138,7 @@ var Zorpodnix = (function () {
   function Animation(groupName, action, cleanup, seconds) {
     this.groupName = groupName;
     this.action = action;
-    this.cleanup= cleanup;
+    this.cleanup = cleanup;
     this.duration = (seconds === undefined ? null : seconds * 1000);
   }
   Animation.prototype.launch = function () {
@@ -163,7 +169,9 @@ var Zorpodnix = (function () {
   };
   Animation.prototype.delete = function () {
     this.finished = true;
-    this.cleanup();
+    if (this.cleanup) {
+      this.cleanup();
+    }
   };
 
   function clearAnimationGroup(groupName) {
@@ -488,9 +496,12 @@ var Zorpodnix = (function () {
       span = unitSpan * weights[i];
       bottom += span;
       y = bottom - span / 2;
-      showShape = (i < current.spellIndex || !shape.hidden);
-      if (showShape) {
+      //showShape = (i < current.spellIndex || !shape.hidden);
+      //if (showShape) {
         context.save();
+        if (shape.opacity !== undefined) {
+          context.globalAlpha = shape.opacity;
+        }
         context.translate(shapeX, y);
         shapeRadius = spanFill * span / 2;
         context.lineWidth = layout.shape.lineFactor;
@@ -498,7 +509,7 @@ var Zorpodnix = (function () {
         context.fillStyle = '#ddd';
         shape.paint(context);
         context.restore();
-      }
+      //}
       textWidth = context.measureText(shape.syllable).width;
       context.fillStyle = textColors[i];
       context.fillText(shape.syllable,
@@ -538,7 +549,7 @@ var Zorpodnix = (function () {
       weights[shrinkIndex] = 1;
       weights[growIndex] = maxWeight;
     };
-    clearAnimationGroup('spell');
+    //clearAnimationGroup('spell');
     (new Animation('spell', action, cleanup, seconds)).launch();
   }
 
@@ -684,17 +695,14 @@ var Zorpodnix = (function () {
         }
         shape.actionPosition.x = x;
         shape.actionPosition.y = y;
-      }, function () {})).launch();
+      }, null)).launch();
     });
 
     // Hide a certain number of shapes according to the phase index.
-    spellShapes.forEach(function (shape) {
-      shape.hidden = false;
-    });
     current.numHidden = current.phaseIndex;
     current.hiddenShapes = choose(spellShapes, current.numHidden);
     current.hiddenShapes.forEach(function (shape) {
-      shape.hidden = true;
+      hideShape(shape);
     });
 
     current.spellWeights = current.spellShapes.map(function (shape, i) {
@@ -706,6 +714,9 @@ var Zorpodnix = (function () {
   }
 
   function finishStage() {
+    current.spellShapes.forEach(function (shape) {
+      restoreShape(shape);
+    });
     containers.info.innerHTML = 'stage completed';
     current.stageIndex += 1;
     if (current.stageIndex == level.numPairs) {
@@ -732,11 +743,30 @@ var Zorpodnix = (function () {
         indices.push(index);
       }
     });
-    shape = current.spellShapes[Math.floor(Math.random() * indices.length)];
-    shape.hidden = true;
+    shape = current.spellShapes[indices[Math.floor(
+        Math.random() * indices.length)]];
     current.hiddenShapes.push(shape);
+    hideShape(shape);
     transitionSpellShape(0, current.spellShapes.length - 1);
     startTrial();
+  }
+
+  function hideShape(shape) {
+    shape.hidden = true;
+    (new Animation('spell', function (progress) {
+      shape.opacity = 1 - progress;
+    }, function () {
+      shape.opacity = 0;
+    }, animation.spell.vanish.seconds)).launch();
+  }
+
+  function restoreShape(shape) {
+    shape.hidden = false;
+    (new Animation('spell', function (progress) {
+      shape.opacity = progress;
+    }, function () {
+      shape.opacity = 1;
+    }, animation.spell.reveal.seconds)).launch();
   }
 
   function hitShape() {
@@ -795,14 +825,16 @@ var Zorpodnix = (function () {
         paintShape(shape, shapeContext, radius, tx, ty - height, options);
       }
       shapeContext.restore();
-    }, function () {}, animation.hit.seconds)).launch();
+    }, null, animation.hit.seconds)).launch();
   }
 
   function missShape() {
+    var restoredShape;
     transitionSpellShape(0, current.spellIndex);
     if (current.numHidden > 0) {
       current.numHidden -= 1;
-      current.hiddenShapes.pop().hidden = false;
+      restoredShape = current.hiddenShapes.pop();
+      restoreShape(restoredShape);
     }
     startTrial();
   }
@@ -859,7 +891,7 @@ var Zorpodnix = (function () {
         context.closePath();
         context.restore();
       }
-    }, function () {}, animation.touch.seconds)).launch();
+    }, null, animation.touch.seconds)).launch();
   }
 
   function handleTouch(x, y) {
