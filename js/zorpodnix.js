@@ -415,11 +415,48 @@ var Zorpodnix = (function () {
   }
 
   function paintInfo() {
-    containers.info.innerHTML = [
-      'phase ' + (current.phaseIndex + 1) + ' / 4',
-      'stage ' + (current.stageIndex + 1) + ' / 4',
-      'hide ' + (current.numHidden) + ' / 3'
-    ].join('<br>');
+    var numPhases = 4,
+        numStages = 4,
+        numTrials = 4 - current.phaseIndex,
+        context = contexts.info,
+        size = sizes.info.width,
+        numRows = Math.ceil(Math.sqrt(numStages)),
+        cellSize = size / numRows,
+        numCols = numRows,
+        i, j, r, c, left, top,
+        x, y, height, gray;
+    // The number of stages is determined by the number of pairs that
+    // the player must memorize in the current level. The novice level has
+    // four pairs. Because the spell length is three, there are C(4, 3) = 4
+    // possible stages.
+    // In each phase of the novice level, we go through all four stages.
+    // The number of trials per stage depends on the phase. In the first
+    // phase, there are four trials per stage; in the second, three; in the
+    // third, two; in the fourth, one.
+    context.clearRect(0, 0, size, size);
+    // Paint a progress bar for each stage.
+    for (i = 0; i < numStages; ++i) {
+      c = i % numCols;
+      r = (i - c) / numRows;
+      left = r * cellSize;
+      top = c * cellSize;
+      for (j = 0; j < numTrials; ++j) {
+        // Calculate the center of the left side of the triangle, which
+        // points toward the right.
+        x = left + j * cellSize / 4;
+        y = top + cellSize / 2;
+        // The length of the side of the current triangle.
+        height = cellSize * (1 - j / 4);
+        context.beginPath();
+        context.moveTo(x, y - height / 2);
+        context.lineTo(left + cellSize, y);
+        context.lineTo(x, y + height / 2);
+        context.closePath();
+        gray = 200 - j * 20;
+        context.fillStyle = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
+        context.fill();
+      }
+    }
   }
 
   function paintShape(shape, context, radius, x, y, options) {
