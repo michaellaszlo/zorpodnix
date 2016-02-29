@@ -710,7 +710,6 @@ var Zorpodnix = (function () {
     });
     transitionSpellShape(0);
     startTrial();
-    status.inStage = true;
   }
 
   function finishStage() {
@@ -728,11 +727,13 @@ var Zorpodnix = (function () {
 
   function startTrial() {
     current.spellIndex = 0;
+    status.inTrial = true;
   }
 
   function finishTrial() {
     var indices = [],
         i, shape;
+    status.inTrial = false;
     current.numHidden += 1;
     if (current.numHidden > current.spellShapes.length) {
       finishStage();
@@ -903,7 +904,7 @@ var Zorpodnix = (function () {
         tx, ty,
         wraparound,
         X, Y, i, dd, ddTarget, isHit;
-    if (!status.inStage) {
+    if (!status.inTrial) {
       return;
     }
 
