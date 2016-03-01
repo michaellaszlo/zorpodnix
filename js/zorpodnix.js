@@ -643,19 +643,23 @@ var Zorpodnix = (function () {
     current.phaseIndex = 0;
     startPhase();
     nextCycle();
+    console.log(JSON.stringify(status));
   }
   
   function finishLevel() {
     containers.info.innerHTML = 'level completed';
     status.inLevel = false;
+    console.log(JSON.stringify(status));
   }
 
   function startPhase() {
     current.stageIndex = 0;
     startStage();
+    console.log(JSON.stringify(status));
   }
 
   function finishPhase() {
+    console.log(JSON.stringify(status));
   }
 
   function startStage() {
@@ -765,6 +769,7 @@ var Zorpodnix = (function () {
   function startTrial() {
     current.spellIndex = 0;
     status.inTrial = true;
+    console.log(JSON.stringify(status));
   }
 
   function finishTrial() {
@@ -787,6 +792,7 @@ var Zorpodnix = (function () {
     hideShape(shape);
     transitionSpellShape(0, current.spellShapes.length - 1);
     startTrial();
+    console.log(JSON.stringify(status));
   }
 
   function hideShape(shape) {
@@ -1019,6 +1025,7 @@ var Zorpodnix = (function () {
     configureTouch();
     window.onresize = resize;
     startLevel();
+    console.log(JSON.stringify(status));
   }
 
   return {
