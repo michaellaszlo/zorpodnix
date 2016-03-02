@@ -426,9 +426,11 @@ var Zorpodnix = (function () {
         numCols = numRows,
         i, j, r, c, left, top,
         x, y,
-        gray,
+        doneColor = '#444',
+        waitingColor = '#ccc',
         height,
-        width = paintSize * Math.sqrt(3) / 2;
+        width = paintSize * Math.sqrt(3) / 2,
+        strokeWidth = 2;
     // The number of stages is determined by the number of pairs that
     // the player must memorize in the current level. The novice level has
     // four pairs. Because the spell length is three, there are C(4, 3) = 4
@@ -440,7 +442,7 @@ var Zorpodnix = (function () {
     context.clearRect(0, 0, size, size);
     // Paint a progress bar for each stage.
     context.strokeStyle = '#fff';
-    context.lineWidth = 2;
+    context.lineWidth = strokeWidth;
     for (i = 0; i < numStages; ++i) {
       c = i % numCols;
       r = (i - c) / numRows;
@@ -458,9 +460,17 @@ var Zorpodnix = (function () {
         context.lineTo(left + width, y);
         context.lineTo(x, y + height / 2);
         context.closePath();
-        gray = 200 - j * 20;
-        context.fillStyle = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
+        if (i < current.stageIndex ||
+            (i == current.stageIndex && j < current.trialIndex)) {
+          context.fillStyle = doneColor;
+        } else {
+          context.fillStyle = waitingColor;
+        }
         context.fill();
+        context.beginPath();
+        context.moveTo(x - strokeWidth / 2, y - cellSize / 2);
+        context.lineTo(x - strokeWidth / 2, y + cellSize / 2);
+        context.closePath();
         context.stroke();
       }
     }
@@ -650,23 +660,18 @@ var Zorpodnix = (function () {
     current.phaseIndex = 0;
     startPhase();
     nextCycle();
-    console.log(JSON.stringify(status));
   }
   
   function finishLevel() {
-    containers.info.innerHTML = 'level completed';
     status.inLevel = false;
-    console.log(JSON.stringify(status));
   }
 
   function startPhase() {
     current.stageIndex = 0;
     startStage();
-    console.log(JSON.stringify(status));
   }
 
   function finishPhase() {
-    console.log(JSON.stringify(status));
   }
 
   function startStage() {
@@ -757,6 +762,7 @@ var Zorpodnix = (function () {
       return 1;
     });
     transitionSpellShape(0);
+    current.trialIndex = 0;
     startTrial();
   }
 
@@ -764,8 +770,8 @@ var Zorpodnix = (function () {
     current.spellShapes.forEach(function (shape) {
       restoreShape(shape);
     });
-    containers.info.innerHTML = 'stage completed';
     current.stageIndex += 1;
+    current.trialIndex = 0;
     if (current.stageIndex == level.numPairs) {
       finishLevel();
       return;
@@ -776,13 +782,13 @@ var Zorpodnix = (function () {
   function startTrial() {
     current.spellIndex = 0;
     status.inTrial = true;
-    console.log(JSON.stringify(status));
   }
 
   function finishTrial() {
     var indices = [],
         i, shape;
     status.inTrial = false;
+    current.trialIndex += 1;
     current.numHidden += 1;
     if (current.numHidden > current.spellShapes.length) {
       finishStage();
@@ -799,7 +805,6 @@ var Zorpodnix = (function () {
     hideShape(shape);
     transitionSpellShape(0, current.spellShapes.length - 1);
     startTrial();
-    console.log(JSON.stringify(status));
   }
 
   function hideShape(shape) {
@@ -884,6 +889,7 @@ var Zorpodnix = (function () {
     transitionSpellShape(0, current.spellIndex);
     if (current.numHidden > 0) {
       current.numHidden -= 1;
+      current.trialIndex -= 1;
       restoredShape = current.hiddenShapes.pop();
       restoreShape(restoredShape);
     }
@@ -1032,7 +1038,6 @@ var Zorpodnix = (function () {
     configureTouch();
     window.onresize = resize;
     startLevel();
-    console.log(JSON.stringify(status));
   }
 
   return {
