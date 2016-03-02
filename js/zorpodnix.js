@@ -422,9 +422,13 @@ var Zorpodnix = (function () {
         size = sizes.info.width,
         numRows = Math.ceil(Math.sqrt(numStages)),
         cellSize = size / numRows,
+        paintSize = 0.95 * cellSize,
         numCols = numRows,
         i, j, r, c, left, top,
-        x, y, height, gray;
+        x, y,
+        gray,
+        height,
+        width = paintSize * Math.sqrt(3) / 2;
     // The number of stages is determined by the number of pairs that
     // the player must memorize in the current level. The novice level has
     // four pairs. Because the spell length is three, there are C(4, 3) = 4
@@ -435,26 +439,29 @@ var Zorpodnix = (function () {
     // third, two; in the fourth, one.
     context.clearRect(0, 0, size, size);
     // Paint a progress bar for each stage.
+    context.strokeStyle = '#fff';
+    context.lineWidth = 2;
     for (i = 0; i < numStages; ++i) {
       c = i % numCols;
       r = (i - c) / numRows;
-      left = r * cellSize;
+      left = r * cellSize + (cellSize - width) / 2;
       top = c * cellSize;
       for (j = 0; j < numTrials; ++j) {
         // Calculate the center of the left side of the triangle, which
         // points toward the right.
-        x = left + j * cellSize / 4;
+        x = left + width * j / 4;
         y = top + cellSize / 2;
         // The length of the side of the current triangle.
-        height = cellSize * (1 - j / 4);
+        height = paintSize * (1 - j / 4);
         context.beginPath();
         context.moveTo(x, y - height / 2);
-        context.lineTo(left + cellSize, y);
+        context.lineTo(left + width, y);
         context.lineTo(x, y + height / 2);
         context.closePath();
         gray = 200 - j * 20;
         context.fillStyle = 'rgb(' + [ gray, gray, gray ].join(', ') + ')';
         context.fill();
+        context.stroke();
       }
     }
   }
