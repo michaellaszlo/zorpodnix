@@ -718,38 +718,6 @@ var Zorpodnix = (function () {
 
     // Action shapes: a shuffled array of spell shapes and decoy shapes.
     current.actionShapes = spellShapes.concat(decoyShapes);
-    shuffle(current.actionShapes);
-    clearAnimationGroup('action');
-    current.actionShapes.forEach(function (shape) {
-      var angle = Math.random() * 2 * Math.PI,
-          step = 0.001,
-          dx = Math.cos(angle) * step,
-          dy = Math.sin(angle) * step;
-      shape.actionPosition = {
-        x: Math.random(),
-        y: Math.random()
-      };
-      (new Animation('action', function (progress) {
-        var x = shape.actionPosition.x,
-            y = shape.actionPosition.y;
-        x += dx;
-        while (x < 0) {
-          x += 1;
-        }
-        while (x >= 1) {
-          x -= 1;
-        }
-        y += dy;
-        while (y < 0) {
-          y += 1;
-        }
-        while (y >= 1) {
-          y -= 1;
-        }
-        shape.actionPosition.x = x;
-        shape.actionPosition.y = y;
-      }, null)).launch();
-    });
 
     // Hide a certain number of shapes according to the phase index.
     current.numHidden = current.phaseIndex;
@@ -782,6 +750,42 @@ var Zorpodnix = (function () {
   function startTrial() {
     current.spellIndex = 0;
     status.inTrial = true;
+    animateShapes();
+  }
+
+  function animateShapes() {
+    shuffle(current.actionShapes);
+    clearAnimationGroup('action');
+    current.actionShapes.forEach(function (shape) {
+      var angle = Math.random() * 2 * Math.PI,
+          step = 0.001,
+          dx = Math.cos(angle) * step,
+          dy = Math.sin(angle) * step;
+      shape.actionPosition = {
+        x: Math.random(),
+        y: Math.random()
+      };
+      (new Animation('action', function (progress) {
+        var x = shape.actionPosition.x,
+            y = shape.actionPosition.y;
+        x += dx;
+        while (x < 0) {
+          x += 1;
+        }
+        while (x >= 1) {
+          x -= 1;
+        }
+        y += dy;
+        while (y < 0) {
+          y += 1;
+        }
+        while (y >= 1) {
+          y -= 1;
+        }
+        shape.actionPosition.x = x;
+        shape.actionPosition.y = y;
+      }, null)).launch();
+    });
   }
 
   function finishTrial() {
