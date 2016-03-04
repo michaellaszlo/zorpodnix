@@ -790,25 +790,32 @@ var Zorpodnix = (function () {
 
   function finishTrial() {
     var indices = [],
+        canvas = canvases.action,
         i, shape;
     status.inTrial = false;
-    current.trialIndex += 1;
-    current.numHidden += 1;
-    if (current.numHidden > current.spellShapes.length) {
-      finishStage();
-      return;
-    }
-    current.spellShapes.forEach(function (shape, index) {
-      if (!shape.hidden) {
-        indices.push(index);
+    function startNext() {
+      canvas.style.opacity = 1;
+      current.numHidden += 1;
+      if (current.numHidden > current.spellShapes.length) {
+        finishStage();
+        return;
       }
-    });
-    shape = current.spellShapes[indices[Math.floor(
-        Math.random() * indices.length)]];
-    current.hiddenShapes.push(shape);
-    hideShape(shape);
-    transitionSpellShape(0, current.spellShapes.length - 1);
-    startTrial();
+      current.spellShapes.forEach(function (shape, index) {
+        if (!shape.hidden) {
+          indices.push(index);
+        }
+      });
+      shape = current.spellShapes[indices[Math.floor(
+          Math.random() * indices.length)]];
+      current.hiddenShapes.push(shape);
+      hideShape(shape);
+      transitionSpellShape(0, current.spellShapes.length - 1);
+      startTrial();
+      console.log(JSON.stringify(status));
+    }
+    (new Animation('action', function (progress) {
+      canvas.style.opacity = 1 - progress;
+    }, startNext, 1)).launch();
   }
 
   function hideShape(shape) {
